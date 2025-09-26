@@ -1,0 +1,3 @@
+[profile.default]
+via_ir = true
+optimizer = true
