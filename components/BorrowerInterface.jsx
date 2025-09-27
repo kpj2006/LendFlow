@@ -5,7 +5,22 @@ import { useAccount, useContractRead, useContractWrite, usePrepareContractWrite 
 import { parseUnits, formatUnits } from 'ethers'
 import { ethers } from 'ethers'
 import { toUtf8String, toUtf8Bytes } from 'ethers'
-import { TrendingDown, DollarSign, AlertCircle, FileText, Bitcoin, Database, Zap } from 'lucide-react'
+import { 
+  Zap, 
+  DollarSign, 
+  AlertTriangle, 
+  FileText, 
+  Bitcoin, 
+  Database, 
+  Target,
+  TrendingDown,
+  Shield,
+  Timer,
+  Coins,
+  Activity,
+  ChevronRight,
+  Sparkles
+} from 'lucide-react'
 import { LENDING_POOL_ABI, CONTRACT_ADDRESSES, USDC_ABI, CETH_ABI } from '../hooks/useContract'
 import { useLendingDataStorage } from '../hooks/useWalrus'
 
@@ -188,213 +203,315 @@ export default function BorrowerInterface() {
   const availableLiquidity = poolStatus ? formatUSDC(poolStatus[0]) : '0.00'
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-      {/* Request Loan Card */}
-      <div className="card">
-        <div className="flex items-center mb-6">
-          <TrendingDown className="h-6 w-6 text-warning-600 mr-3" />
-          <h2 className="text-xl font-semibold text-gray-900">Request Loan</h2>
+    <div className="space-y-8">
+      {/* Header Section */}
+      <div className="text-center mb-8">
+        <div className="flex items-center justify-center mb-4">
+          <div className="h-px bg-gradient-to-r from-transparent via-red-400 to-transparent flex-1 max-w-32"></div>
+          <Target className="h-8 w-8 text-red-400 mx-4" />
+          <div className="h-px bg-gradient-to-r from-transparent via-red-400 to-transparent flex-1 max-w-32"></div>
         </div>
-
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Loan Amount (USDC)
-            </label>
-            <input
-              type="number"
-              step="0.01"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              className="input-field"
-              placeholder="Enter loan amount"
-            />
-            <p className="text-sm text-gray-500 mt-1">
-              Available Pool Liquidity: {availableLiquidity} USDC
-            </p>
-          </div>
-
-          {amount && (
-            <div className="p-4 bg-blue-50 rounded-lg">
-              <div className="flex items-center mb-2">
-                <AlertCircle className="h-4 w-4 text-blue-600 mr-2" />
-                <span className="text-sm font-medium text-blue-800">
-                  {isWhaleBorrower ? 'Whale Borrower' : 'Small Borrower'}
-                </span>
-              </div>
-              <p className="text-sm text-blue-700">
-                {isWhaleBorrower 
-                  ? 'You will be matched with highest APY lenders first'
-                  : 'You will be matched with lowest APY lenders first'
-                }
-              </p>
-            </div>
-          )}
-
-          {/* BTC Collateral Option */}
-          <div className="flex items-center">
-            <input
-              type="checkbox"
-              id="btcCollateral"
-              checked={requireBTCCollateral}
-              onChange={(e) => setRequireBTCCollateral(e.target.checked)}
-              className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-            />
-            <label htmlFor="btcCollateral" className="ml-2 block text-sm text-gray-700 flex items-center">
-              <Bitcoin className="h-4 w-4 mr-1" />
-              Require BTC Collateral (150% ratio for enhanced security)
-            </label>
-          </div>
-
-          {/* Loan Document */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
-              <FileText className="h-4 w-4 mr-1" />
-              Loan Document (stored on Walrus)
-            </label>
-            <textarea
-              value={loanDocument}
-              onChange={(e) => setLoanDocument(e.target.value)}
-              className="input-field"
-              placeholder="Optional: Add loan terms, purpose, etc. (stored decentralized)"
-              rows={3}
-            />
-          </div>
-
-          {/* Cross-chain Option */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
-              <Zap className="h-4 w-4 mr-1" />
-              Target Chain (optional)
-            </label>
-            <select
-              value={targetChain}
-              onChange={(e) => setTargetChain(e.target.value)}
-              className="input-field"
-            >
-              <option value="">Same Chain (USDC)</option>
-              <option value="bitcoin">Bitcoin (via Rootstock)</option>
-            </select>
-          </div>
-
-          <button
-            onClick={handleRequestLoan}
-            disabled={isLoading || !amount || parseFloat(amount) > parseFloat(availableLiquidity)}
-            className="btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isLoading ? 'Processing...' : 'Request Loan'}
-          </button>
-        </div>
+        <h1 className="text-3xl font-orbitron font-bold text-transparent bg-clip-text bg-gradient-to-r from-red-400 to-pink-400 mb-2">
+          BORROWER TERMINAL
+        </h1>
+        <p className="text-gray-400 font-orbitron uppercase text-sm tracking-wider">
+          Access Credit • Deploy Capital • Maximize Returns
+        </p>
       </div>
 
-      {/* Loan and Collateral Section */}
-      <div className="space-y-4">
-        {/* Current Loan Card */}
-        <div className="card">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Request Loan Card */}
+        <div className="card-glow">
           <div className="flex items-center mb-6">
-            <DollarSign className="h-6 w-6 text-danger-600 mr-3" />
-            <h2 className="text-xl font-semibold text-gray-900">Your Loan</h2>
+            <div className="p-3 bg-red-600/20 rounded-lg mr-4">
+              <TrendingDown className="h-6 w-6 text-red-400" />
+            </div>
+            <div>
+              <h2 className="text-xl font-orbitron font-semibold text-red-400 uppercase">
+                Credit Request
+              </h2>
+              <p className="text-gray-400 text-sm">Initialize loan parameters</p>
+            </div>
           </div>
 
-        {borrowerDetails && borrowerDetails[4] ? ( // active status
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <p className="text-sm text-gray-600">Borrowed Amount</p>
-                <p className="text-lg font-semibold">{formatUSDC(borrowerDetails[0])} USDC</p>
+          <div className="space-y-6">
+            <div>
+              <label className="block text-sm font-orbitron font-medium text-cyan-400 mb-3 uppercase tracking-wider">
+                Target Amount (USDC)
+              </label>
+              <div className="relative">
+                <input
+                  type="number"
+                  step="0.01"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  className="input-field pl-12"
+                  placeholder="Enter loan amount"
+                />
+                <DollarSign className="h-5 w-5 text-gray-400 absolute left-4 top-1/2 transform -translate-y-1/2" />
               </div>
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <p className="text-sm text-gray-600">Weighted APY</p>
-                <p className="text-lg font-semibold text-red-600">{formatAPY(borrowerDetails[1])}</p>
-              </div>
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <p className="text-sm text-gray-600">Due Date</p>
-                <p className="text-lg font-semibold">{new Date(Number(borrowerDetails[3]) * 1000).toLocaleDateString()}</p>
-              </div>
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <p className="text-sm text-gray-600">Repayment Amount</p>
-                <p className="text-lg font-semibold">{formatUSDC(borrowerDetails[6])} USDC</p>
-              </div>
-            </div>
-
-            <div className="border-t pt-4">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm text-gray-600 flex items-center">
-                  <Zap className="h-4 w-4 mr-1" />
-                  Cross-Chain Loan
-                </span>
-                <span className="text-sm font-medium">{borrowerDetails[5] ? 'Yes' : 'No'}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Status</span>
-                <span className={`text-sm font-medium ${borrowerDetails[4] ? 'text-green-600' : 'text-red-600'}`}>
-                  {borrowerDetails[4] ? 'Active' : 'Inactive'}
-                </span>
+              <div className="flex items-center justify-between mt-2 text-sm">
+                <span className="text-gray-400">Available Pool Liquidity:</span>
+                <span className="font-mono text-cyan-400">{availableLiquidity} USDC</span>
               </div>
             </div>
 
-            {/* Walrus Loan Document Display */}
-            {storedLoanDocument && (
-              <div className="border-t pt-4">
-                <h3 className="text-sm font-medium text-gray-700 mb-2 flex items-center">
-                  <Database className="h-4 w-4 mr-1" />
-                  Stored Loan Document (Walrus)
-                </h3>
-                <div className="bg-gray-50 p-3 rounded text-xs font-mono text-gray-600 max-h-20 overflow-y-auto">
-                  {storedLoanDocument ? JSON.stringify(storedLoanDocument, null, 2) : 'No document stored'}
+            {amount && (
+              <div className={`p-4 rounded-lg border ${
+                isWhaleBorrower 
+                  ? 'bg-purple-900/20 border-purple-500/30' 
+                  : 'bg-blue-900/20 border-blue-500/30'
+              }`}>
+                <div className="flex items-center mb-2">
+                  <Sparkles className="h-4 w-4 text-purple-400 mr-2" />
+                  <span className="badge-primary">
+                    {isWhaleBorrower ? '🐋 Whale Protocol' : '🔷 Standard Protocol'}
+                  </span>
                 </div>
+                <p className="text-sm text-gray-300">
+                  {isWhaleBorrower 
+                    ? '⚡ Priority matching with highest APY lenders • Premium features unlocked'
+                    : '🎯 Optimized matching with lowest APY lenders • Cost-efficient borrowing'
+                  }
+                </p>
               </div>
             )}
 
-            <div className="pt-4 border-t">
-              <button
-                onClick={handleRepayLoan}
-                className="btn-primary w-full"
-                disabled={isLoading}
-              >
-                {isLoading ? 'Processing...' : 'Repay Loan'}
-              </button>
+            {/* Advanced Options */}
+            <div className="space-y-4 border-t border-gray-700 pt-6">
+              <h3 className="text-sm font-orbitron text-cyan-400 uppercase tracking-wider flex items-center">
+                <Shield className="h-4 w-4 mr-2" />
+                Security Configuration
+              </h3>
+              
+              <div className="space-y-4">
+                {/* BTC Collateral Option */}
+                <label className="flex items-center p-3 bg-gray-800/50 rounded-lg border border-gray-700 hover:border-orange-500/50 transition-colors cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={requireBTCCollateral}
+                    onChange={(e) => setRequireBTCCollateral(e.target.checked)}
+                    className="h-4 w-4 text-orange-500 bg-gray-800 border-gray-600 rounded focus:ring-orange-500 focus:ring-2"
+                  />
+                  <div className="ml-3 flex-1">
+                    <div className="flex items-center">
+                      <Bitcoin className="h-4 w-4 text-orange-500 mr-2" />
+                      <span className="text-orange-400 font-semibold">Enhanced BTC Collateral</span>
+                    </div>
+                    <p className="text-gray-400 text-xs mt-1">150% collateral ratio • Military-grade security</p>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-gray-500" />
+                </label>
+
+                {/* Target Chain */}
+                <div>
+                  <label className="block text-sm font-orbitron text-cyan-400 mb-2 uppercase tracking-wider">
+                    <Zap className="h-4 w-4 inline mr-1" />
+                    Deployment Chain
+                  </label>
+                  <select
+                    value={targetChain}
+                    onChange={(e) => setTargetChain(e.target.value)}
+                    className="input-field"
+                  >
+                    <option value="">Same Chain (USDC)</option>
+                    <option value="bitcoin">Cross-Chain Bitcoin (via Rootstock)</option>
+                  </select>
+                </div>
+
+                {/* Loan Document */}
+                <div>
+                  <label className="block text-sm font-orbitron text-cyan-400 mb-2 uppercase tracking-wider">
+                    <Database className="h-4 w-4 inline mr-1" />
+                    Decentralized Documentation
+                  </label>
+                  <textarea
+                    value={loanDocument}
+                    onChange={(e) => setLoanDocument(e.target.value)}
+                    className="input-field"
+                    placeholder="Loan terms, purpose, metadata... (stored on Walrus Network)"
+                    rows={3}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">📡 Encrypted & stored on Walrus decentralized storage</p>
+                </div>
+              </div>
             </div>
+
+            <button
+              onClick={handleRequestLoan}
+              disabled={isLoading || !amount || parseFloat(amount) > parseFloat(availableLiquidity)}
+              className="btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isLoading ? (
+                <div className="flex items-center justify-center">
+                  <div className="spinner h-4 w-4 mr-2"></div>
+                  Executing Transaction...
+                </div>
+              ) : (
+                <div className="flex items-center justify-center">
+                  <Target className="h-4 w-4 mr-2" />
+                  Initialize Loan Request
+                </div>
+              )}
+            </button>
           </div>
-        ) : (
-          <div className="text-center py-8">
-            <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-500">No active loan</p>
-            <p className="text-sm text-gray-400 mt-2">
-              Request a loan to get started
-            </p>
-          </div>
-        )}
         </div>
 
-        {/* cETH Collateral Card - Compact */}
-        <div className="card bg-gradient-to-r from-orange-50 to-yellow-50 border border-orange-200">
-          <div className="flex items-center mb-4">
-            <Bitcoin className="h-5 w-5 text-orange-600 mr-2" />
-            <h3 className="text-lg font-semibold text-orange-800">🧪 Test Collateral</h3>
+        {/* Loan Status Section */}
+        <div className="space-y-6">
+          {/* Current Loan Card */}
+          <div className="card-glow">
+            <div className="flex items-center mb-6">
+              <div className="p-3 bg-green-600/20 rounded-lg mr-4">
+                <Activity className="h-6 w-6 text-green-400" />
+              </div>
+              <div>
+                <h2 className="text-xl font-orbitron font-semibold text-green-400 uppercase">
+                  Active Position
+                </h2>
+                <p className="text-gray-400 text-sm">Current loan status</p>
+              </div>
+            </div>
+
+            {borrowerDetails && borrowerDetails[4] ? ( // active status
+              <div className="space-y-6">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="stat-card">
+                    <div className="stat-card-label">Borrowed Amount</div>
+                    <div className="stat-card-value">{formatUSDC(borrowerDetails[0])}</div>
+                    <div className="text-xs text-gray-400 uppercase">USDC</div>
+                  </div>
+                  <div className="stat-card">
+                    <div className="stat-card-label">Weighted APY</div>
+                    <div className="stat-card-value text-red-400">{formatAPY(borrowerDetails[1])}</div>
+                    <div className="text-xs text-gray-400 uppercase">Interest Rate</div>
+                  </div>
+                  <div className="stat-card">
+                    <div className="stat-card-label">Maturity Date</div>
+                    <div className="stat-card-value text-sm">{new Date(Number(borrowerDetails[3]) * 1000).toLocaleDateString()}</div>
+                    <div className="text-xs text-gray-400 uppercase">Due Date</div>
+                  </div>
+                  <div className="stat-card">
+                    <div className="stat-card-label">Total Repayment</div>
+                    <div className="stat-card-value text-yellow-400">{formatUSDC(borrowerDetails[6])}</div>
+                    <div className="text-xs text-gray-400 uppercase">USDC</div>
+                  </div>
+                </div>
+
+                <div className="border border-gray-700 rounded-lg p-4 bg-gray-800/30">
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-400 flex items-center">
+                        <Zap className="h-4 w-4 mr-1" />
+                        Cross-Chain
+                      </span>
+                      <span className={`badge ${borrowerDetails[5] ? 'badge-success' : 'badge-primary'}`}>
+                        {borrowerDetails[5] ? 'Active' : 'Same Chain'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-400">Status</span>
+                      <span className="badge-success">
+                        {borrowerDetails[4] ? '🟢 Active' : '🔴 Inactive'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Walrus Document Display */}
+                {storedLoanDocument && (
+                  <div className="border border-gray-700 rounded-lg p-4 bg-gray-900/50">
+                    <h4 className="text-sm font-orbitron text-cyan-400 mb-2 flex items-center">
+                      <Database className="h-4 w-4 mr-1" />
+                      Stored Documentation (Walrus Network)
+                    </h4>
+                    <div className="bg-gray-900 p-3 rounded text-xs font-mono text-gray-400 max-h-20 overflow-y-auto border border-gray-800">
+                      {storedLoanDocument ? JSON.stringify(storedLoanDocument, null, 2) : 'No document found'}
+                    </div>
+                  </div>
+                )}
+
+                <button
+                  onClick={handleRepayLoan}
+                  className="btn-success w-full"
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <div className="flex items-center justify-center">
+                      <div className="spinner h-4 w-4 mr-2"></div>
+                      Processing...
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-center">
+                      <Coins className="h-4 w-4 mr-2" />
+                      Execute Loan Repayment
+                    </div>
+                  )}
+                </button>
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <div className="relative">
+                  <div className="h-16 w-16 bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Timer className="h-8 w-8 text-gray-400" />
+                  </div>
+                  <div className="absolute -inset-2 bg-gray-700/20 rounded-full blur-xl"></div>
+                </div>
+                <h3 className="text-lg font-orbitron text-gray-400 mb-2">No Active Position</h3>
+                <p className="text-sm text-gray-500 mb-4">Initialize a loan request to get started</p>
+                <div className="badge-primary">
+                  🚀 Ready to Deploy Capital
+                </div>
+              </div>
+            )}
           </div>
 
-          <div className="space-y-3">
-            <p className="text-orange-700 text-sm">
-              Get test cETH tokens for collateral. Limited to 1,000 cETH per day.
-            </p>
-            
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-orange-700">Balance:</span>
-              <span className="font-mono font-medium">{formatCETH(cethBalance)} cETH</span>
+          {/* Test Collateral Card - Gaming Style */}
+          <div className="card bg-gradient-to-br from-orange-900/20 to-yellow-900/20 border-orange-500/30">
+            <div className="flex items-center mb-4">
+              <div className="p-2 bg-orange-600/20 rounded-lg mr-3">
+                <Bitcoin className="h-5 w-5 text-orange-400" />
+              </div>
+              <div>
+                <h3 className="text-lg font-orbitron font-semibold text-orange-400">🧪 Test Collateral Vault</h3>
+                <p className="text-orange-300/70 text-xs">Development environment only</p>
+              </div>
             </div>
-            
-            <button
-              onClick={() => getCETH?.()}
-              disabled={isFaucetLoading}
-              className="btn-secondary w-full disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isFaucetLoading ? 'Getting cETH...' : 'Get 1,000 Test cETH'}
-            </button>
-            
-            <p className="text-xs text-orange-600">
-              ⏰ 24-hour cooldown between claims.
-            </p>
+
+            <div className="space-y-4">
+              <div className="p-3 bg-orange-900/20 rounded-lg border border-orange-500/20">
+                <p className="text-orange-200 text-sm mb-2">
+                  🎯 Acquire test cETH tokens for collateral testing
+                </p>
+                <div className="text-xs text-orange-300/70">
+                  ⏱️ Limited to 1,000 cETH per 24-hour cycle
+                </div>
+              </div>
+              
+              <div className="stat-card bg-orange-900/10">
+                <div className="stat-card-label text-orange-400">Current Balance</div>
+                <div className="stat-card-value text-orange-300">{formatCETH(cethBalance)}</div>
+                <div className="text-xs text-orange-400 uppercase">cETH Tokens</div>
+              </div>
+              
+              <button
+                onClick={() => getCETH?.()}
+                disabled={isFaucetLoading}
+                className="btn-secondary w-full disabled:opacity-50"
+              >
+                {isFaucetLoading ? (
+                  <div className="flex items-center justify-center">
+                    <div className="spinner h-4 w-4 mr-2"></div>
+                    Deploying cETH...
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center">
+                    <Bitcoin className="h-4 w-4 mr-2" />
+                    Deploy 1,000 Test cETH
+                  </div>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       </div>
