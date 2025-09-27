@@ -7,6 +7,7 @@ import { ethers } from 'ethers'
 import { toUtf8String, toUtf8Bytes } from 'ethers'
 import { TrendingUp, DollarSign, Clock, Bitcoin, Database, Zap } from 'lucide-react'
 import { LENDING_POOL_ABI, CONTRACT_ADDRESSES, USDC_ABI } from '../hooks/useContract'
+import { useLendingDataStorage } from '../hooks/useWalrus'
 
 const LENDING_POOL_ADDRESS = CONTRACT_ADDRESSES.LENDING_POOL
 const USDC_ADDRESS = CONTRACT_ADDRESSES.USDC
@@ -17,43 +18,59 @@ export default function LenderInterface() {
   const [apy, setApy] = useState('3.8')
   const [useBitcoinCollateral, setUseBitcoinCollateral] = useState(false)
   const [lenderMetadata, setLenderMetadata] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
+  const [walrusMetadata, setWalrusMetadata] = useState(null)
 
-  // Get user's USDC balance
-  const { data: usdcBalance } = useContractRead({
-    address: USDC_ADDRESS,
-    abi: USDC_ABI,
-    functionName: 'balanceOf',
-    args: [address],
-    watch: true
-  })
+  // Walrus storage hook - must be called before useEffect that uses it
+  const { storeLendingData, retrieveLendingData, isLoading: walrusLoading, error: walrusError } = useLendingDataStorage()
 
-  // Get stable APY (MakerDAO + Aave hybrid)
-  const { data: stableAPY } = useContractRead({
-    address: LENDING_POOL_ADDRESS,
-    abi: LENDING_POOL_ABI,
-    functionName: 'getStableAPY',
-    watch: true
-  })
+  // Load Walrus metadata on component mount
+  useEffect(() => {
+    const loadWalrusData = async () => {
+      if (address) {
+        const blobId = localStorage.getItem(`lender_metadata_${address}`)
+        if (blobId) {
+          const data = await retrieveLendingData(blobId)
+          setWalrusMetadata(data)
+        }
+      }
+    }
+    loadWalrusData()
+  }, [address, retrieveLendingData])
 
-  // Get lender details (enhanced)
-  const { data: lenderDetails } = useContractRead({
-    address: LENDING_POOL_ADDRESS,
-    abi: LENDING_POOL_ABI,
-    functionName: 'getLenderDetails',
-    args: [address],
-    watch: true
-  })
+  // Store lender metadata on Walrus when adding liquidity
+  const handleAddLiquidity = async () => {
+    if (!amount || !apy) return
 
-  // Get lender data from Walrus
-  const { data: lenderWalrusData } = useContractRead({
-    address: LENDING_POOL_ADDRESS,
-    abi: LENDING_POOL_ABI,
-    functionName: 'retrieveLenderData',
-    args: [address],
-    watch: true,
-    enabled: lenderDetails?.[9] && lenderDetails[9] !== '0x0000000000000000000000000000000000000000000000000000000000000000'
-  })
+    setIsLoading(true)
+    try {
+      // Store metadata on Walrus first
+      if (lenderMetadata.trim()) {
+        const metadataResult = await storeLendingData({
+          type: 'lender_metadata',
+          address: address,
+          amount: amount,
+          apy: apy,
+          metadata: lenderMetadata,
+          timestamp: Date.now()
+        })
+
+        if (metadataResult?.blobId) {
+          // Store blobId in localStorage for later retrieval
+          localStorage.setItem(`lender_metadata_${address}`, metadataResult.blobId)
+          console.log('Metadata stored on Walrus:', metadataResult.blobId)
+        }
+      }
+
+      // First approve USDC spending
+      await approve()
+      // Then add liquidity
+      await addLiquidity()
+    } catch (error) {
+      console.error('Error adding liquidity:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   // Prepare approve transaction
   const { config: approveConfig } = usePrepareContractWrite({
@@ -81,22 +98,6 @@ export default function LenderInterface() {
 
   const { write: approve } = useContractWrite(approveConfig)
   const { write: addLiquidity } = useContractWrite(addLiquidityConfig)
-
-  const handleAddLiquidity = async () => {
-    if (!amount || !apy) return
-    
-    setIsLoading(true)
-    try {
-      // First approve USDC spending
-      await approve()
-      // Then add liquidity
-      await addLiquidity()
-    } catch (error) {
-      console.error('Error adding liquidity:', error)
-    } finally {
-      setIsLoading(false)
-    }
-  }
 
   const formatAPY = (apyValue) => {
     if (!apyValue) return '0.00%'
@@ -232,20 +233,6 @@ export default function LenderInterface() {
                 <span className="text-sm text-gray-600">Your APY</span>
                 <span className="text-sm font-medium">{(Number(lenderDetails[4]) / 100).toFixed(2)}%</span>
               </div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm text-gray-600 flex items-center">
-                  <Bitcoin className="h-4 w-4 mr-1" />
-                  BTC Collateral
-                </span>
-                <span className="text-sm font-medium">{formatBTC(lenderDetails[7])} BTC</span>
-              </div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm text-gray-600 flex items-center">
-                  <Database className="h-4 w-4 mr-1" />
-                  Walrus Rewards
-                </span>
-                <span className="text-sm font-medium">{formatUSDC(lenderDetails[6])} WAL</span>
-              </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-600">Status</span>
                 <span className={`text-sm font-medium ${lenderDetails[5] ? 'text-green-600' : 'text-red-600'}`}>
@@ -255,14 +242,14 @@ export default function LenderInterface() {
             </div>
 
             {/* Walrus Data Display */}
-            {lenderWalrusData && (
+            {walrusMetadata && (
               <div className="border-t pt-4">
                 <h3 className="text-sm font-medium text-gray-700 mb-2 flex items-center">
                   <Database className="h-4 w-4 mr-1" />
                   Stored Metadata (Walrus)
                 </h3>
                 <div className="bg-gray-50 p-3 rounded text-xs font-mono text-gray-600 max-h-20 overflow-y-auto">
-                  {lenderWalrusData ? toUtf8String(lenderWalrusData) : 'No metadata stored'}
+                  {JSON.stringify(walrusMetadata, null, 2)}
                 </div>
               </div>
             )}

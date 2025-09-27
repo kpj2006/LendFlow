@@ -6,27 +6,6 @@ import { ReentrancyGuard } from "@openzeppelin/contracts/security/ReentrancyGuar
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { Pausable } from "@openzeppelin/contracts/security/Pausable.sol";
 
-// Pyth Oracle Interface (already integrated)
-interface IPythOracle {
-    function getPrice(bytes32 priceId) external view returns (int64 price, uint64 conf, int32 expo, uint256 publishTime);
-    function updatePriceFeeds(bytes[] calldata updateData) external payable;
-}
-
-// Walrus Protocol Interface for decentralized storage
-interface IWalrusStorage {
-    function storeBlob(bytes calldata data) external payable returns (bytes32 blobId);
-    function retrieveBlob(bytes32 blobId) external view returns (bytes memory data);
-    function deleteBlob(bytes32 blobId) external;
-    function getBlobInfo(bytes32 blobId) external view returns (uint256 size, uint256 timestamp, bool exists);
-}
-
-interface IWalrusToken {
-    function transfer(address to, uint256 amount) external returns (bool);
-    function balanceOf(address account) external view returns (uint256);
-    function allowance(address owner, address spender) external view returns (uint256);
-    function transferFrom(address from, address to, uint256 amount) external returns (bool);
-}
-
 // Rootstock Bridge Interface for Bitcoin integration
 interface IRootstockBridge {
     function lockBTC(uint256 amount) external payable;
@@ -68,11 +47,8 @@ interface IAaveV3Pool {
 contract LendingPoolIntegrated is ReentrancyGuard, Ownable, Pausable {
     // Core tokens
     IERC20 public immutable usdcToken;
-    IWalrusToken public walrusToken;
     
     // Protocol integrations
-    IPythOracle public pythOracle;
-    IWalrusStorage public walrusStorage;
     IRootstockBridge public rootstockBridge;
     IPot public pot;  // MakerDAO Pot contract for DSR
     IAaveV3Pool public aavePool;  // Aave v3 Pool contract
@@ -84,10 +60,6 @@ contract LendingPoolIntegrated is ReentrancyGuard, Ownable, Pausable {
     uint256 public constant RAY = 1e27;  // Ray unit for fixed-point math
     uint256 public constant SECONDS_PER_YEAR = 31536000;  // Seconds in a year
     
-    // Price feed IDs
-    bytes32 public constant USDC_PRICE_ID = 0xeaa020c61cc479712813461ce153894a96a6c00b21ed0cfc2798d1f9a9e9c94a;
-    bytes32 public constant BTC_PRICE_ID = 0xe62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43;
-    
     struct Lender {
         uint256 totalDeposited;
         uint256 availableAmount;
@@ -96,12 +68,6 @@ contract LendingPoolIntegrated is ReentrancyGuard, Ownable, Pausable {
         uint256 fixedAPY;
         bool active;
         uint256 timestamp;
-        // Walrus integration
-        bytes32 lenderDataBlob;  // Stores lender's historical data on Walrus
-        uint256 walrusRewards;   // WAL token rewards for using storage
-        // Rootstock integration
-        uint256 btcCollateral;   // BTC collateral from Rootstock
-        bool isBitcoinLender;    // Flag for Bitcoin-backed lending
     }
     
     struct Borrower {
@@ -111,8 +77,6 @@ contract LendingPoolIntegrated is ReentrancyGuard, Ownable, Pausable {
         uint256 dueDate;
         bool active;
         // Multi-protocol data
-        bytes32 loanDocumentBlob;  // Loan agreement stored on Walrus
-        uint256 btcCollateralRatio; // BTC collateral ratio for enhanced security
         bool crossChainLoan;       // Flag for cross-chain loan
     }
     
@@ -120,21 +84,16 @@ contract LendingPoolIntegrated is ReentrancyGuard, Ownable, Pausable {
         address lender;
         uint256 amount;
         uint256 apy;
-        bytes32 chunkDataBlob;  // Chunk details stored on Walrus
     }
 
     struct ProtocolFees {
-        uint256 walrusStorageFee;    // Fee for storing data on Walrus
         uint256 rootstockBridgeFee;  // Fee for Rootstock bridge operations
-        uint256 pythUpdateFee;       // Fee for Pyth price updates
     }
     
     // State variables
     mapping(address => Lender) public lenders;
     mapping(address => Borrower) public borrowers;
     mapping(address => LoanChunk[]) public borrowerLoans;
-    mapping(address => uint256) public btcCollaterals;  // BTC collateral tracking
-    mapping(bytes32 => bool) public storedBlobs;        // Walrus blob tracking
     
     address[] public lenderList;
     address[] public borrowerList;
@@ -143,8 +102,6 @@ contract LendingPoolIntegrated is ReentrancyGuard, Ownable, Pausable {
     uint256 public totalAvailableLiquidity;
     uint256 public totalLentAmount;
     uint256 public totalInterestEarned;
-    uint256 public totalBTCCollateral;
-    uint256 public totalWalrusRewards;
     
     ProtocolFees public protocolFees;
     
@@ -152,46 +109,33 @@ contract LendingPoolIntegrated is ReentrancyGuard, Ownable, Pausable {
     uint256 public constant WHALE_THRESHOLD = 1000 * 10**6;
     uint256 public constant BASIS_POINTS = 10000;
     uint256 public constant LOAN_DURATION = 30 days;
-    uint256 public constant BTC_COLLATERAL_RATIO = 15000; // 150%
-    uint256 public constant WALRUS_REWARD_RATE = 50; // 0.5% in WAL tokens
     
     uint256 public minAPY = 100; // 1%
     uint256 public maxAPY = 2000; // 20%
     
     // Events
-    event LenderAdded(address indexed lender, uint256 amount, uint256 apy, bool isBitcoinBacked);
-    event BorrowerMatched(address indexed borrower, uint256 amount, uint256 weightedAPY, uint256 dueDate, bytes32 documentBlob);
+    event LenderAdded(address indexed lender, uint256 amount, uint256 apy);
+    event BorrowerMatched(address indexed borrower, uint256 amount, uint256 weightedAPY, uint256 dueDate);
     event LoanRepaid(address indexed borrower, uint256 principal, uint256 interest);
     event LoanLiquidated(address indexed borrower, uint256 amount);
     event LiquidityWithdrawn(address indexed lender, uint256 amount);
     event InterestClaimed(address indexed lender, uint256 interest);
-    event BTCCollateralAdded(address indexed user, uint256 amount);
-    event WalrusDataStored(address indexed user, bytes32 blobId, uint256 size);
-    event WalrusRewardsClaimed(address indexed user, uint256 amount);
     event CrossChainLoanExecuted(address indexed borrower, uint256 amount, string targetChain);
     
     constructor(
         address _usdcToken,
-        address _pythOracle,
-        address _walrusStorage,
-        address _walrusToken,
         address _rootstockBridge,
         address _makerPot,
         address _aavePool
     ) {
         usdcToken = IERC20(_usdcToken);
-        pythOracle = IPythOracle(_pythOracle);
-        walrusStorage = IWalrusStorage(_walrusStorage);
-        walrusToken = IWalrusToken(_walrusToken);
         rootstockBridge = IRootstockBridge(_rootstockBridge);
         pot = IPot(_makerPot);
         aavePool = IAaveV3Pool(_aavePool);
         
         // Initialize protocol fees
         protocolFees = ProtocolFees({
-            walrusStorageFee: 1000,      // 0.01 USDC
-            rootstockBridgeFee: 5000,    // 0.05 USDC
-            pythUpdateFee: 100           // 0.001 USDC
+            rootstockBridgeFee: 5000    // 0.05 USDC
         });
     }
     
@@ -332,41 +276,18 @@ contract LendingPoolIntegrated is ReentrancyGuard, Ownable, Pausable {
     function addLiquidity(
         uint256 amount, 
         uint256 fixedAPY, 
-        bool useBitcoinCollateral,
         bytes calldata lenderMetadata
-    ) external payable nonReentrant whenNotPaused {
+    ) external nonReentrant whenNotPaused {
         require(amount > 0, "Amount must be greater than 0");
         require(fixedAPY >= minAPY && fixedAPY <= maxAPY, "APY out of allowed range");
         
-        // Update price feeds from Pyth
-        _updatePriceFeeds();
-        
         usdcToken.transferFrom(msg.sender, address(this), amount);
-        
-        // Handle Bitcoin collateral if requested
-        uint256 btcCollateralAmount = 0;
-        if (useBitcoinCollateral) {
-            btcCollateralAmount = _handleBitcoinCollateral(amount);
-        }
-        
-        // Store lender metadata on Walrus
-        bytes32 lenderDataBlob = _storeOnWalrus(lenderMetadata);
-        
-        // Calculate Walrus rewards
-        uint256 walrusReward = (amount * WALRUS_REWARD_RATE) / BASIS_POINTS;
         
         if (lenders[msg.sender].active) {
             // Update existing lender
             lenders[msg.sender].totalDeposited += amount;
             lenders[msg.sender].availableAmount += amount;
             lenders[msg.sender].fixedAPY = fixedAPY;
-            lenders[msg.sender].btcCollateral += btcCollateralAmount;
-            lenders[msg.sender].walrusRewards += walrusReward;
-            
-            // Update blob with new data
-            if (lenderDataBlob != bytes32(0)) {
-                lenders[msg.sender].lenderDataBlob = lenderDataBlob;
-            }
         } else {
             // New lender
             lenders[msg.sender] = Lender({
@@ -376,49 +297,25 @@ contract LendingPoolIntegrated is ReentrancyGuard, Ownable, Pausable {
                 earnedInterest: 0,
                 fixedAPY: fixedAPY,
                 active: true,
-                timestamp: block.timestamp,
-                lenderDataBlob: lenderDataBlob,
-                walrusRewards: walrusReward,
-                btcCollateral: btcCollateralAmount,
-                isBitcoinLender: useBitcoinCollateral
+                timestamp: block.timestamp
             });
             lenderList.push(msg.sender);
         }
         
         totalAvailableLiquidity += amount;
-        if (btcCollateralAmount > 0) {
-            totalBTCCollateral += btcCollateralAmount;
-        }
-        totalWalrusRewards += walrusReward;
         
-        emit LenderAdded(msg.sender, amount, fixedAPY, useBitcoinCollateral);
-        if (lenderDataBlob != bytes32(0)) {
-            emit WalrusDataStored(msg.sender, lenderDataBlob, lenderMetadata.length);
-        }
+        emit LenderAdded(msg.sender, amount, fixedAPY);
     }
     
     // Enhanced loan request with multi-protocol features
     function requestLoan(
         uint256 amount,
         bytes calldata loanDocument,
-        bool requireBTCCollateral,
         string calldata targetChain
     ) external payable nonReentrant whenNotPaused {
         require(amount > 0, "Amount must be greater than 0");
         require(amount <= totalAvailableLiquidity, "Insufficient pool liquidity");
         require(!borrowers[msg.sender].active, "Borrower already has active loan");
-        
-        // Update price feeds
-        _updatePriceFeeds();
-        
-        // Store loan document on Walrus
-        bytes32 loanDocumentBlob = _storeOnWalrus(loanDocument);
-        
-        // Handle BTC collateral if required
-        uint256 btcCollateralRatio = 0;
-        if (requireBTCCollateral) {
-            btcCollateralRatio = _requireBTCCollateral(amount);
-        }
         
         // Match loan with lenders
         LoanChunk[] storage loanChunks = borrowerLoans[msg.sender];
@@ -441,8 +338,6 @@ contract LendingPoolIntegrated is ReentrancyGuard, Ownable, Pausable {
             timestamp: block.timestamp,
             dueDate: dueDate,
             active: true,
-            loanDocumentBlob: loanDocumentBlob,
-            btcCollateralRatio: btcCollateralRatio,
             crossChainLoan: bytes(targetChain).length > 0
         });
         borrowerList.push(msg.sender);
@@ -451,7 +346,7 @@ contract LendingPoolIntegrated is ReentrancyGuard, Ownable, Pausable {
         totalAvailableLiquidity -= amount;
         totalLentAmount += amount;
         
-        emit BorrowerMatched(msg.sender, amount, weightedAPY, dueDate, loanDocumentBlob);
+        emit BorrowerMatched(msg.sender, amount, weightedAPY, dueDate);
         
         // Handle cross-chain loan if specified
         if (bytes(targetChain).length > 0) {
@@ -462,87 +357,10 @@ contract LendingPoolIntegrated is ReentrancyGuard, Ownable, Pausable {
         }
     }
     
-    // Internal function to handle Bitcoin collateral
-    function _handleBitcoinCollateral(uint256 usdcAmount) internal returns (uint256) {
-        (int64 btcPrice, , ,) = pythOracle.getPrice(BTC_PRICE_ID);
-        require(btcPrice > 0, "Invalid BTC price");
-        
-        // Calculate required BTC collateral (150% of USDC amount)
-        uint256 requiredBTCValue = (usdcAmount * BTC_COLLATERAL_RATIO) / BASIS_POINTS;
-        uint256 requiredBTC = (requiredBTCValue * 1e8) / uint256(int256(btcPrice));
-        
-        // Lock BTC through Rootstock bridge
-        require(msg.value >= requiredBTC, "Insufficient BTC collateral");
-        rootstockBridge.lockBTC{value: requiredBTC}(requiredBTC);
-        
-        btcCollaterals[msg.sender] += requiredBTC;
-        
-        emit BTCCollateralAdded(msg.sender, requiredBTC);
-        return requiredBTC;
-    }
-    
-    // Internal function to require BTC collateral for borrowers
-   function _requireBTCCollateral(uint256 loanAmount) internal returns (uint256) {
-    (int64 btcPrice, , ,) = pythOracle.getPrice(BTC_PRICE_ID);
-    require(btcPrice > 0, "Invalid BTC price");
-
-    uint256 requiredBTCValue = (loanAmount * BTC_COLLATERAL_RATIO) / BASIS_POINTS;
-    uint256 requiredBTC = (requiredBTCValue * 1e8) / uint256(int256(btcPrice));
-
-    require(msg.value >= requiredBTC, "Insufficient BTC collateral for loan");
-    rootstockBridge.lockBTC{value: requiredBTC}(requiredBTC);
-
-    btcCollaterals[msg.sender] += requiredBTC;
-
-    emit BTCCollateralAdded(msg.sender, requiredBTC);
-    return BTC_COLLATERAL_RATIO;
-}
-    
-    // Internal function to store data on Walrus (for calldata)
-    function _storeOnWalrus(bytes calldata data) internal returns (bytes32) {
-        if (data.length == 0) return bytes32(0);
-        
-        require(address(this).balance >= protocolFees.walrusStorageFee, "Insufficient fee for Walrus storage");
-        
-        try walrusStorage.storeBlob{value: protocolFees.walrusStorageFee}(data) returns (bytes32 blobId) {
-            storedBlobs[blobId] = true;
-            return blobId;
-        } catch {
-            return bytes32(0);
-        }
-    }
-    
     // Internal helper to store memory data on Walrus
     function _storeOnWalrusFromMemory(bytes memory data) internal returns (bytes32) {
-        if (data.length == 0) return bytes32(0);
-        
-        require(address(this).balance >= protocolFees.walrusStorageFee, "Insufficient fee for Walrus storage");
-        
-        // Convert bytes memory to bytes calldata by using assembly or creating a wrapper
-        // For simplicity, we'll use a direct call approach
-        try this.storeDataWrapper{value: protocolFees.walrusStorageFee}(data) returns (bytes32 blobId) {
-            storedBlobs[blobId] = true;
-            return blobId;
-        } catch {
-            return bytes32(0);
-        }
-    }
-    
-    // Wrapper function to handle memory to calldata conversion
-    function storeDataWrapper(bytes calldata data) external payable returns (bytes32) {
-        require(msg.sender == address(this), "Only self calls allowed");
-        return walrusStorage.storeBlob{value: msg.value}(data);
-    }
-    
-    // Internal function to update price feeds from Pyth
-    function _updatePriceFeeds() internal {
-        // In a real implementation, you would pass the actual price update data
-        // This is a placeholder for the Pyth price update mechanism
-        try pythOracle.updatePriceFeeds{value: protocolFees.pythUpdateFee}(new bytes[](0)) {
-            // Price feeds updated successfully
-        } catch {
-            // Handle price update failure
-        }
+        // Walrus integration moved to off-chain HTTP API
+        return bytes32(0);
     }
     
     // Enhanced matching for small borrowers with protocol integration
@@ -557,15 +375,10 @@ contract LendingPoolIntegrated is ReentrancyGuard, Ownable, Pausable {
             if (lender.active && lender.availableAmount > 0) {
                 uint256 chunkAmount = remainingAmount > lender.availableAmount ? lender.availableAmount : remainingAmount;
                 
-                // Store chunk data on Walrus
-                bytes memory chunkData = abi.encode(lenderAddr, chunkAmount, lender.fixedAPY, block.timestamp);
-                bytes32 chunkBlob = _storeOnWalrusFromMemory(chunkData);
-                
                 loanChunks.push(LoanChunk({
                     lender: lenderAddr,
                     amount: chunkAmount,
-                    apy: lender.fixedAPY,
-                    chunkDataBlob: chunkBlob
+                    apy: lender.fixedAPY
                 }));
                 
                 lender.availableAmount -= chunkAmount;
@@ -589,15 +402,10 @@ contract LendingPoolIntegrated is ReentrancyGuard, Ownable, Pausable {
             if (lender.active && lender.availableAmount > 0) {
                 uint256 chunkAmount = remainingAmount > lender.availableAmount ? lender.availableAmount : remainingAmount;
                 
-                // Store chunk data on Walrus
-                bytes memory chunkData = abi.encode(lenderAddr, chunkAmount, lender.fixedAPY, block.timestamp);
-                bytes32 chunkBlob = _storeOnWalrusFromMemory(chunkData);
-                
                 loanChunks.push(LoanChunk({
                     lender: lenderAddr,
                     amount: chunkAmount,
-                    apy: lender.fixedAPY,
-                    chunkDataBlob: chunkBlob
+                    apy: lender.fixedAPY
                 }));
                 
                 lender.availableAmount -= chunkAmount;
@@ -647,19 +455,6 @@ contract LendingPoolIntegrated is ReentrancyGuard, Ownable, Pausable {
             lenders[lenderAddr].availableAmount += chunk.amount;
             lenders[lenderAddr].lentAmount -= chunk.amount;
             lenders[lenderAddr].earnedInterest += lenderInterest;
-            
-            // Add Walrus rewards for successful loan completion
-            uint256 bonusReward = (chunk.amount * 10) / BASIS_POINTS; // 0.1% bonus
-            lenders[lenderAddr].walrusRewards += bonusReward;
-            totalWalrusRewards += bonusReward;
-        }
-        
-        // Return BTC collateral if any
-        if (borrower.btcCollateralRatio > 0 && btcCollaterals[msg.sender] > 0) {
-            uint256 collateralToReturn = btcCollaterals[msg.sender];
-            btcCollaterals[msg.sender] = 0;
-            totalBTCCollateral -= collateralToReturn;
-            rootstockBridge.unlockBTC(collateralToReturn, msg.sender);
         }
         
         // Update global tracking
@@ -673,31 +468,6 @@ contract LendingPoolIntegrated is ReentrancyGuard, Ownable, Pausable {
         _removeBorrowerFromList(msg.sender);
         
         emit LoanRepaid(msg.sender, borrower.amount, totalInterest);
-    }
-    
-    // Claim Walrus rewards
-    function claimWalrusRewards() external nonReentrant {
-        require(lenders[msg.sender].active, "Not an active lender");
-        require(lenders[msg.sender].walrusRewards > 0, "No rewards to claim");
-        
-        uint256 rewards = lenders[msg.sender].walrusRewards;
-        lenders[msg.sender].walrusRewards = 0;
-        
-        // Transfer WAL tokens as rewards
-        require(walrusToken.transfer(msg.sender, rewards), "WAL transfer failed");
-        
-        emit WalrusRewardsClaimed(msg.sender, rewards);
-    }
-    
-    // Retrieve data from Walrus storage
-    function retrieveLenderData(address lender) external view returns (bytes memory) {
-        require(lenders[lender].lenderDataBlob != bytes32(0), "No data stored");
-        return walrusStorage.retrieveBlob(lenders[lender].lenderDataBlob);
-    }
-    
-    function retrieveLoanDocument(address borrower) external view returns (bytes memory) {
-        require(borrowers[borrower].loanDocumentBlob != bytes32(0), "No loan document stored");
-        return walrusStorage.retrieveBlob(borrowers[borrower].loanDocumentBlob);
     }
     
     // Keep all existing functions from original contract
@@ -767,14 +537,6 @@ contract LendingPoolIntegrated is ReentrancyGuard, Ownable, Pausable {
             lenders[lenderAddr].totalDeposited -= chunk.amount;
         }
         
-        // Liquidate BTC collateral if any
-        if (btcCollaterals[borrowerAddr] > 0) {
-            uint256 collateral = btcCollaterals[borrowerAddr];
-            btcCollaterals[borrowerAddr] = 0;
-            totalBTCCollateral -= collateral;
-            // BTC collateral can be distributed to affected lenders or kept as protocol revenue
-        }
-        
         totalLentAmount -= borrower.amount;
         
         delete borrowers[borrowerAddr];
@@ -836,52 +598,16 @@ contract LendingPoolIntegrated is ReentrancyGuard, Ownable, Pausable {
     
     // Enhanced APY management with multi-protocol price feeds
     function updateAPYRange() external onlyOwner {
-        try pythOracle.getPrice(USDC_PRICE_ID) returns (int64 usdcPrice, uint64, int32, uint256) {
-            try pythOracle.getPrice(BTC_PRICE_ID) returns (int64 btcPrice, uint64, int32, uint256) {
-                // Adjust APY based on both USDC and BTC stability
-                bool usdcStable = (usdcPrice > 0.999e8 && usdcPrice < 1.001e8);
-                bool btcVolatile = _isBTCVolatile(btcPrice);
-                
-                if (usdcStable && !btcVolatile) {
-                    minAPY = 100;  // 1%
-                    maxAPY = 1000; // 10%
-                } else if (usdcStable && btcVolatile) {
-                    minAPY = 150;  // 1.5%
-                    maxAPY = 1500; // 15%
-                } else {
-                    minAPY = 200;  // 2%
-                    maxAPY = 2000; // 20%
-                }
-            } catch {
-                // Fallback to USDC-only logic
-                if (usdcPrice > 0.999e8 && usdcPrice < 1.001e8) {
-                    minAPY = 100;
-                    maxAPY = 1000;
-                } else {
-                    minAPY = 200;
-                    maxAPY = 2000;
-                }
-            }
-        } catch {
-            // Keep current ranges if Pyth fails
-        }
-    }
-    
-    function _isBTCVolatile(int64 btcPrice) internal pure returns (bool) {
-        // Simple volatility check - in production, you'd want more sophisticated logic
-        // This is a placeholder implementation
-        return btcPrice < 30000e8 || btcPrice > 100000e8;
+        // Set fixed APY ranges since we fetch rates directly from protocols
+        minAPY = 100;  // 1%
+        maxAPY = 2000; // 20%
     }
     
     // Protocol fee management
     function updateProtocolFees(
-        uint256 _walrusStorageFee,
-        uint256 _rootstockBridgeFee,
-        uint256 _pythUpdateFee
+        uint256 _rootstockBridgeFee
     ) external onlyOwner {
-        protocolFees.walrusStorageFee = _walrusStorageFee;
         protocolFees.rootstockBridgeFee = _rootstockBridgeFee;
-        protocolFees.pythUpdateFee = _pythUpdateFee;
     }
     
     // Enhanced pool status with multi-protocol metrics
@@ -892,15 +618,11 @@ contract LendingPoolIntegrated is ReentrancyGuard, Ownable, Pausable {
         uint256 activeBorrowers,
         uint256 averageAPY,
         uint256 totalInterest,
-        uint256 totalBTCLocked,
-        uint256 totalWalrusRewardsPool,
         uint256 crossChainLoans
     ) {
         totalAvailable = totalAvailableLiquidity;
         totalLent = totalLentAmount;
         totalInterest = totalInterestEarned;
-        totalBTCLocked = totalBTCCollateral;
-        totalWalrusRewardsPool = totalWalrusRewards;
         
         uint256 activeL = 0;
         uint256 activeB = 0;
@@ -927,13 +649,14 @@ contract LendingPoolIntegrated is ReentrancyGuard, Ownable, Pausable {
         activeBorrowers = activeB;
         crossChainLoans = crossChain;
         averageAPY = activeL > 0 ? totalAPY / activeL : 0;
+        
+        return (totalAvailable, totalLent, activeLenders, activeBorrowers, averageAPY, totalInterest, crossChainLoans);
     }
     
     // Enhanced simulation with protocol features
-    function simulateLoan(uint256 amount, bool requireBTCCollateral) external view returns (
+    function simulateLoan(uint256 amount) external view returns (
         LoanChunk[] memory chunks,
         uint256 weightedAPY,
-        uint256 requiredBTCCollateral,
         uint256 estimatedWalrusStorageCost
     ) {
         require(amount <= totalAvailableLiquidity, "Insufficient liquidity for simulation");
@@ -954,8 +677,7 @@ contract LendingPoolIntegrated is ReentrancyGuard, Ownable, Pausable {
                 tempChunks[chunkCount] = LoanChunk({
                     lender: lenderAddr,
                     amount: chunkAmount,
-                    apy: lender.fixedAPY,
-                    chunkDataBlob: bytes32(0) // Not stored in simulation
+                    apy: lender.fixedAPY
                 });
                 
                 remainingAmount -= chunkAmount;
@@ -977,22 +699,10 @@ contract LendingPoolIntegrated is ReentrancyGuard, Ownable, Pausable {
             weightedAPY = totalWeighted / (amount - remainingAmount);
         }
         
-        // Calculate BTC collateral requirement
-        if (requireBTCCollateral) {
-            try pythOracle.getPrice(BTC_PRICE_ID) returns (int64 btcPrice, uint64, int32, uint256) {
-                if (btcPrice > 0) {
-                    uint256 requiredBTCValue = (amount * BTC_COLLATERAL_RATIO) / BASIS_POINTS;
-                    requiredBTCCollateral = (requiredBTCValue * 1e8) / uint256(int256(btcPrice));
-                }
-            } catch {
-                requiredBTCCollateral = 0;
-            }
-        }
+        // Estimate Walrus storage cost (now off-chain, so 0)
+        estimatedWalrusStorageCost = 0;
         
-        // Estimate Walrus storage cost
-        estimatedWalrusStorageCost = protocolFees.walrusStorageFee;
-        
-        return (chunks, weightedAPY, requiredBTCCollateral, estimatedWalrusStorageCost);
+        return (chunks, weightedAPY, estimatedWalrusStorageCost);
     }
     
     // Multi-protocol lender details
@@ -1002,11 +712,7 @@ contract LendingPoolIntegrated is ReentrancyGuard, Ownable, Pausable {
         uint256 lentAmount,
         uint256 earnedInterest,
         uint256 fixedAPY,
-        bool active,
-        uint256 walrusRewards,
-        uint256 btcCollateral,
-        bool isBitcoinLender,
-        bytes32 lenderDataBlob
+        bool active
     ) {
         Lender memory l = lenders[lender];
         return (
@@ -1015,11 +721,7 @@ contract LendingPoolIntegrated is ReentrancyGuard, Ownable, Pausable {
             l.lentAmount,
             l.earnedInterest,
             l.fixedAPY,
-            l.active,
-            l.walrusRewards,
-            l.btcCollateral,
-            l.isBitcoinLender,
-            l.lenderDataBlob
+            l.active
         );
     }
     
@@ -1030,8 +732,6 @@ contract LendingPoolIntegrated is ReentrancyGuard, Ownable, Pausable {
         uint256 timestamp,
         uint256 dueDate,
         bool active,
-        bytes32 loanDocumentBlob,
-        uint256 btcCollateralRatio,
         bool crossChainLoan,
         uint256 currentRepaymentAmount
     ) {
@@ -1048,8 +748,6 @@ contract LendingPoolIntegrated is ReentrancyGuard, Ownable, Pausable {
             b.timestamp,
             b.dueDate,
             b.active,
-            b.loanDocumentBlob,
-            b.btcCollateralRatio,
             b.crossChainLoan,
             repaymentAmount
         );
@@ -1059,7 +757,6 @@ contract LendingPoolIntegrated is ReentrancyGuard, Ownable, Pausable {
     function getProtocolMetrics() external view returns (
         uint256 totalWalrusDataStored,
         uint256 totalBTCCollateralLocked,
-        uint256 availableWalrusRewards,
         ProtocolFees memory currentFees,
         uint256 contractUSDCBalance,
         uint256 contractETHBalance
@@ -1070,8 +767,7 @@ contract LendingPoolIntegrated is ReentrancyGuard, Ownable, Pausable {
         
         return (
             blobCount,
-            totalBTCCollateral,
-            totalWalrusRewards,
+            0, // BTC collateral removed
             protocolFees,
             usdcToken.balanceOf(address(this)),
             address(this).balance
@@ -1101,14 +797,8 @@ contract LendingPoolIntegrated is ReentrancyGuard, Ownable, Pausable {
     
     // Update protocol contracts (only owner)
     function updateProtocolContracts(
-        address _pythOracle,
-        address _walrusStorage,
-        address _walrusToken,
         address _rootstockBridge
     ) external onlyOwner {
-        if (_pythOracle != address(0)) pythOracle = IPythOracle(_pythOracle);
-        if (_walrusStorage != address(0)) walrusStorage = IWalrusStorage(_walrusStorage);
-        if (_walrusToken != address(0)) walrusToken = IWalrusToken(_walrusToken);
         if (_rootstockBridge != address(0)) rootstockBridge = IRootstockBridge(_rootstockBridge);
     }
 }

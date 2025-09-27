@@ -7,6 +7,7 @@ import { ethers } from 'ethers'
 import { toUtf8String, toUtf8Bytes } from 'ethers'
 import { TrendingDown, DollarSign, AlertCircle, FileText, Bitcoin, Database, Zap } from 'lucide-react'
 import { LENDING_POOL_ABI, CONTRACT_ADDRESSES, USDC_ABI } from '../hooks/useContract'
+import { useLendingDataStorage } from '../hooks/useWalrus'
 
 const LENDING_POOL_ADDRESS = CONTRACT_ADDRESSES.LENDING_POOL
 const USDC_ADDRESS = CONTRACT_ADDRESSES.USDC
@@ -45,15 +46,29 @@ export default function BorrowerInterface() {
     watch: true
   })
 
-  // Get loan document from Walrus
-  const { data: loanDocumentData } = useContractRead({
-    address: LENDING_POOL_ADDRESS,
-    abi: LENDING_POOL_ABI,
-    functionName: 'retrieveLoanDocument',
-    args: [address],
-    watch: true,
-    enabled: borrowerDetails?.[5] && borrowerDetails[5] !== '0x0000000000000000000000000000000000000000000000000000000000000000'
-  })
+  // Use off-chain Walrus storage for loan documents
+  const { storeLendingData, retrieveLendingData, isStoring, isRetrieving } = useLendingDataStorage()
+  const [loanDocumentBlobId, setLoanDocumentBlobId] = useState(null)
+  const [storedLoanDocument, setStoredLoanDocument] = useState(null)
+
+  // Load stored loan document on component mount
+  useEffect(() => {
+    const loadStoredDocument = async () => {
+      if (address) {
+        const blobId = localStorage.getItem(`loanDocument_${address}`)
+        if (blobId) {
+          setLoanDocumentBlobId(blobId)
+          try {
+            const document = await retrieveLendingData(blobId)
+            setStoredLoanDocument(document)
+          } catch (error) {
+            console.error('Error retrieving loan document:', error)
+          }
+        }
+      }
+    }
+    loadStoredDocument()
+  }, [address, retrieveLendingData])
 
   // Get stable APY for reference
   const { data: stableAPY } = useContractRead({
@@ -70,7 +85,6 @@ export default function BorrowerInterface() {
     functionName: 'requestLoan',
     args: [
       parseUnits(amount || '0', 6),
-      loanDocument ? toUtf8Bytes(loanDocument) : '0x',
       requireBTCCollateral,
       targetChain
     ],
@@ -95,6 +109,21 @@ export default function BorrowerInterface() {
     
     setIsLoading(true)
     try {
+      // Store loan document off-chain if provided
+      let blobId = null
+      if (loanDocument.trim()) {
+        blobId = await storeLendingData({
+          type: 'loanDocument',
+          borrower: address,
+          amount: amount,
+          document: loanDocument,
+          timestamp: Date.now()
+        })
+        // Store blob ID in localStorage for later retrieval
+        localStorage.setItem(`loanDocument_${address}`, blobId)
+        setLoanDocumentBlobId(blobId)
+      }
+      
       await requestLoan()
     } catch (error) {
       console.error('Error requesting loan:', error)
@@ -258,24 +287,17 @@ export default function BorrowerInterface() {
               </div>
               <div className="bg-gray-50 p-4 rounded-lg">
                 <p className="text-sm text-gray-600">Repayment Amount</p>
-                <p className="text-lg font-semibold">{formatUSDC(borrowerDetails[8])} USDC</p>
+                <p className="text-lg font-semibold">{formatUSDC(borrowerDetails[6])} USDC</p>
               </div>
             </div>
 
             <div className="border-t pt-4">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm text-gray-600 flex items-center">
-                  <Bitcoin className="h-4 w-4 mr-1" />
-                  BTC Collateral Ratio
-                </span>
-                <span className="text-sm font-medium">{borrowerDetails[6] ? `${Number(borrowerDetails[6]) / 100}%` : 'None'}</span>
-              </div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm text-gray-600 flex items-center">
                   <Zap className="h-4 w-4 mr-1" />
                   Cross-Chain Loan
                 </span>
-                <span className="text-sm font-medium">{borrowerDetails[7] ? 'Yes' : 'No'}</span>
+                <span className="text-sm font-medium">{borrowerDetails[5] ? 'Yes' : 'No'}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-600">Status</span>
@@ -286,14 +308,14 @@ export default function BorrowerInterface() {
             </div>
 
             {/* Walrus Loan Document Display */}
-            {loanDocumentData && (
+            {storedLoanDocument && (
               <div className="border-t pt-4">
                 <h3 className="text-sm font-medium text-gray-700 mb-2 flex items-center">
                   <Database className="h-4 w-4 mr-1" />
                   Stored Loan Document (Walrus)
                 </h3>
                 <div className="bg-gray-50 p-3 rounded text-xs font-mono text-gray-600 max-h-20 overflow-y-auto">
-                  {loanDocumentData ? toUtf8String(loanDocumentData) : 'No document stored'}
+                  {storedLoanDocument ? JSON.stringify(storedLoanDocument, null, 2) : 'No document stored'}
                 </div>
               </div>
             )}
