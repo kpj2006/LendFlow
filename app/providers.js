@@ -6,7 +6,25 @@ import { getDefaultWallets, RainbowKitProvider } from '@rainbow-me/rainbowkit'
 // Focusing only on Rootstock testnet for this dapp
 import '@rainbow-me/rainbowkit/styles.css'
 
-// Configure Rootstock Testnet network (primary network for this dapp)
+// Configure development and production networks
+const localhost = {
+  id: 1337,
+  name: 'Localhost 8545',
+  network: 'localhost',
+  nativeCurrency: {
+    decimals: 18,
+    name: 'Ether',
+    symbol: 'ETH',
+  },
+  rpcUrls: {
+    public: { http: ['http://127.0.0.1:8545'] },
+    default: { http: ['http://127.0.0.1:8545'] },
+  },
+  blockExplorers: {
+    default: { name: 'Local Explorer', url: 'http://localhost:8545' },
+  },
+}
+
 const rootstockTestnet = {
   id: 31,
   name: 'Rootstock Testnet',
@@ -25,16 +43,29 @@ const rootstockTestnet = {
   },
 }
 
+// Use localhost for development, Rootstock testnet for production
+const isDevelopment = process.env.NEXT_PUBLIC_NETWORK === 'localhost'
+const activeChains = isDevelopment ? [localhost] : [rootstockTestnet]
+
 const { chains, publicClient } = configureChains(
-  [rootstockTestnet], // Only Rootstock testnet for this dapp
+  activeChains,
   [publicProvider({
     // Add multiple RPC endpoints for better reliability
-    rpc: (chain) => ({
-      http: chain.id === 31 ? [
-        'https://public-node.testnet.rsk.co',
-        'https://mycrypto.testnet.rsk.co'
-      ] : null
-    })
+    rpc: (chain) => {
+      if (chain.id === 31) {
+        return {
+          http: [
+            'https://public-node.testnet.rsk.co',
+            'https://mycrypto.testnet.rsk.co'
+          ]
+        }
+      } else if (chain.id === 1337) {
+        return {
+          http: ['http://127.0.0.1:8545']
+        }
+      }
+      return null
+    }
   })]
 )
 

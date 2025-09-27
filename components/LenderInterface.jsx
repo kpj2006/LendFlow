@@ -37,6 +37,9 @@ export default function LenderInterface() {
   const [lenderMetadata, setLenderMetadata] = useState('')
   const [walrusMetadata, setWalrusMetadata] = useState(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [walrusStatus, setWalrusStatus] = useState(null) // 'storing', 'success', 'error'
+  const [generatedBlobId, setGeneratedBlobId] = useState(null)
+  const [walrusMessage, setWalrusMessage] = useState('')
 
   // Walrus storage hook - must be called before useEffect that uses it
   const { storeLendingData, retrieveLendingData, isLoading: walrusLoading, error: walrusError } = useLendingDataStorage()
@@ -97,28 +100,53 @@ export default function LenderInterface() {
     }
   }, [stableAPY, updateStableAPY, address])
 
+  // Debug contract write functions
+  useEffect(() => {
+    console.log('Contract write functions status:', {
+      approve: typeof approve,
+      addLiquidity: typeof addLiquidity,
+      approveConfig: !!approveConfig,
+      addLiquidityConfig: !!addLiquidityConfig,
+      amount,
+      apy
+    })
+  }, [approve, addLiquidity, approveConfig, addLiquidityConfig, amount, apy])
+
   // Load Walrus metadata on component mount
   useEffect(() => {
     const loadWalrusData = async () => {
       if (address) {
         const blobId = localStorage.getItem(`lender_metadata_${address}`)
         if (blobId) {
-          const data = await retrieveLendingData(blobId)
-          setWalrusMetadata(data)
+          try {
+            const data = await retrieveLendingData(blobId)
+            if (data) {
+              setWalrusMetadata(data)
+            }
+          } catch (error) {
+            console.error('Error loading Walrus metadata:', error)
+          }
         }
       }
     }
     loadWalrusData()
-  }, [address, retrieveLendingData])
+  }, [address]) // Remove retrieveLendingData from dependencies to prevent infinite loop
 
   // Store lender metadata on Walrus when adding liquidity
   const handleAddLiquidity = async () => {
     if (!amount || !apy) return
 
     setIsLoading(true)
+    setWalrusStatus(null)
+    setWalrusMessage('')
+    setGeneratedBlobId(null)
+
     try {
       // Store metadata on Walrus first
       if (lenderMetadata.trim()) {
+        setWalrusStatus('storing')
+        setWalrusMessage('🔄 Storing metadata on Walrus Network...')
+
         const metadataResult = await storeLendingData({
           type: 'lender_metadata',
           address: address,
@@ -131,16 +159,37 @@ export default function LenderInterface() {
         if (metadataResult?.blobId) {
           // Store blobId in localStorage for later retrieval
           localStorage.setItem(`lender_metadata_${address}`, metadataResult.blobId)
-          console.log('Metadata stored on Walrus:', metadataResult.blobId)
+          setGeneratedBlobId(metadataResult.blobId)
+          setWalrusStatus('success')
+          setWalrusMessage(`✅ Metadata stored successfully on Walrus Network!`)
+          console.log('✅ Metadata stored on Walrus with Blob ID:', metadataResult.blobId)
+        } else {
+          console.error('❌ Walrus storage failed - no blob ID returned:', metadataResult)
+          throw new Error('Failed to generate blob ID')
         }
       }
 
+      // Check if contract write functions are available
+      if (!approve) {
+        throw new Error('USDC approve function not available')
+      }
+      if (!addLiquidity) {
+        throw new Error('addLiquidity function not available')
+      }
+
       // First approve USDC spending
+      setWalrusMessage('🔄 Approving USDC spending...')
       await approve()
+      
       // Then add liquidity
+      setWalrusMessage('🔄 Adding liquidity to pool...')
       await addLiquidity()
+
+      setWalrusMessage('🎉 Liquidity added successfully!')
     } catch (error) {
       console.error('Error adding liquidity:', error)
+      setWalrusStatus('error')
+      setWalrusMessage(`❌ Error: ${error.message || 'Failed to add liquidity'}`)
     } finally {
       setIsLoading(false)
     }
@@ -397,6 +446,47 @@ export default function LenderInterface() {
                   rows={3}
                 />
                 <p className="text-xs text-gray-500 mt-1">🔐 End-to-end encrypted • Stored on decentralized network</p>
+                
+                {/* Walrus Status Display */}
+                {walrusStatus && (
+                  <div className={`mt-3 p-3 rounded-lg border text-sm ${
+                    walrusStatus === 'storing' ? 'bg-blue-900/20 border-blue-500/30 text-blue-400' :
+                    walrusStatus === 'success' ? 'bg-green-900/20 border-green-500/30 text-green-400' :
+                    'bg-red-900/20 border-red-500/30 text-red-400'
+                  }`}>
+                    <div className="font-medium">{walrusMessage}</div>
+                    {generatedBlobId && (
+                      <div className="mt-2 flex items-center justify-between">
+                        <span className="text-xs text-gray-400">Blob ID:</span>
+                        <code className="text-xs bg-gray-800 px-2 py-1 rounded font-mono text-cyan-400">
+                          {generatedBlobId.slice(0, 8)}...{generatedBlobId.slice(-8)}
+                        </code>
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(generatedBlobId)
+                            alert('Blob ID copied to clipboard!')
+                          }}
+                          className="text-xs text-cyan-400 hover:text-cyan-300 ml-2"
+                        >
+                          Copy
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Info when no metadata */}
+                {!lenderMetadata.trim() && !walrusStatus && (
+                  <div className="mt-3 p-3 rounded-lg border border-gray-600/30 bg-gray-800/30 text-sm text-gray-400">
+                    <div className="flex items-center">
+                      <Database className="h-4 w-4 mr-2" />
+                      <span>Optional: Add metadata to store on Walrus Network</span>
+                    </div>
+                    <div className="text-xs mt-1 text-gray-500">
+                      Leave empty to skip metadata storage and proceed directly to lending
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -411,7 +501,10 @@ export default function LenderInterface() {
               {isLoading ? (
                 <div className="flex items-center justify-center">
                   <div className="spinner h-4 w-4 mr-2"></div>
-                  Deploying Capital...
+                  {walrusStatus === 'storing' ? 'Storing Metadata...' : 
+                   walrusMessage.includes('Approving') ? 'Approving USDC...' :
+                   walrusMessage.includes('Adding') ? 'Adding Liquidity...' :
+                   'Deploying Capital...'}
                 </div>
               ) : !hasBalance ? (
                 <div className="flex items-center justify-center">
@@ -516,15 +609,56 @@ export default function LenderInterface() {
               )}
 
               {/* Walrus Metadata Display */}
-              {walrusMetadata && (
+              {(walrusMetadata || generatedBlobId) && (
                 <div className="border border-gray-700 rounded-lg p-4 bg-gray-900/50">
-                  <h4 className="text-sm font-orbitron text-cyan-400 mb-2 flex items-center">
+                  <h4 className="text-sm font-orbitron text-cyan-400 mb-3 flex items-center">
                     <Database className="h-4 w-4 mr-1" />
-                    Stored Metadata (Walrus Network)
+                    Walrus Network Storage
                   </h4>
-                  <div className="bg-gray-900 p-3 rounded text-xs font-mono text-gray-400 max-h-20 overflow-y-auto border border-gray-800">
-                    {JSON.stringify(walrusMetadata, null, 2)}
-                  </div>
+                  
+                  {/* Current Session Blob ID */}
+                  {generatedBlobId && (
+                    <div className="mb-4 p-3 bg-green-900/20 border border-green-500/30 rounded">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-green-400 text-sm font-medium">✅ Latest Upload</span>
+                        <span className="text-xs text-gray-400">{new Date().toLocaleTimeString()}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <code className="text-xs bg-gray-800 px-2 py-1 rounded font-mono text-cyan-400">
+                          {generatedBlobId}
+                        </code>
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(generatedBlobId)
+                            alert('Full Blob ID copied to clipboard!')
+                          }}
+                          className="text-xs bg-cyan-600 hover:bg-cyan-500 px-2 py-1 rounded text-white transition-colors"
+                        >
+                          Copy Full ID
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Previous Stored Metadata */}
+                  {walrusMetadata && (
+                    <div>
+                      <span className="text-gray-400 text-sm mb-2 block">📦 Stored Metadata:</span>
+                      <div className="bg-gray-900 p-3 rounded text-xs font-mono text-gray-400 max-h-20 overflow-y-auto border border-gray-800">
+                        {JSON.stringify(walrusMetadata, null, 2)}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Stored Blob ID from localStorage */}
+                  {address && localStorage.getItem(`lender_metadata_${address}`) && (
+                    <div className="mt-3 p-2 bg-blue-900/20 border border-blue-500/30 rounded text-xs">
+                      <span className="text-blue-400">🔗 Previous Blob ID: </span>
+                      <code className="text-cyan-400 font-mono">
+                        {localStorage.getItem(`lender_metadata_${address}`)}
+                      </code>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

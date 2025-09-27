@@ -156,12 +156,9 @@ export function useLendingDataStorage() {
 
   const retrieveLendingData = async (blobId) => {
     if (!isConnected || !walrusClient) {
-      setError('Walrus not connected')
+      console.warn('Walrus not connected')
       return null
     }
-
-    setIsLoading(true)
-    setError(null)
 
     try {
       // Try retrieving with fallback aggregators
@@ -177,13 +174,10 @@ export function useLendingDataStorage() {
       }
 
       const data = await tryWithFallback(walrusClient.aggregators, retrieveOperation)
-
-      setIsLoading(false)
       return data
 
     } catch (err) {
-      setError(err.message)
-      setIsLoading(false)
+      console.error('Error retrieving from Walrus:', err.message)
       return null
     }
   }

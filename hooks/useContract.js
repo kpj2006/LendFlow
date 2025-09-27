@@ -1,28 +1,28 @@
 import { useContractRead, useContractWrite, usePrepareContractWrite } from 'wagmi'
 import { parseUnits, formatUnits } from 'ethers'
 
-// Contract addresses (replace with actual deployed addresses)
+// Contract addresses - Updated with deployed addresses from localhost
 export const CONTRACT_ADDRESSES = {
-  // Core Protocol
-  LENDING_POOL: process.env.NEXT_PUBLIC_LENDING_POOL_ADDRESS || '0x...',
-  USDC: process.env.NEXT_PUBLIC_USDC_ADDRESS || '0x...',
-  CETH: process.env.NEXT_PUBLIC_CETH_ADDRESS || '0x...',
-  PYTH_ORACLE: process.env.NEXT_PUBLIC_PYTH_ORACLE_ADDRESS || '0x...',
+  // Core Protocol - Deployed on Hardhat localhost
+  LENDING_POOL: process.env.NEXT_PUBLIC_LENDING_POOL_ADDRESS || '0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9',
+  USDC: process.env.NEXT_PUBLIC_USDC_ADDRESS || '0x5FbDB2315678afecb367f032d93F642f64180aa3',
+  CETH: process.env.NEXT_PUBLIC_CETH_ADDRESS || '0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512',
+  PYTH_ORACLE: process.env.NEXT_PUBLIC_PYTH_ORACLE_ADDRESS || '0x0000000000000000000000000000000000000000',
 
-  // Walrus Protocol
-  WALRUS_STORAGE: process.env.NEXT_PUBLIC_WALRUS_STORAGE_ADDRESS || '0x...',
-  WALRUS_TOKEN: process.env.NEXT_PUBLIC_WALRUS_TOKEN_ADDRESS || '0x...',
+  // Walrus Protocol - Mock addresses for development
+  WALRUS_STORAGE: process.env.NEXT_PUBLIC_WALRUS_STORAGE_ADDRESS || '0x0000000000000000000000000000000000000000',
+  WALRUS_TOKEN: process.env.NEXT_PUBLIC_WALRUS_TOKEN_ADDRESS || '0x0000000000000000000000000000000000000000',
 
-  // Rootstock Bridge
-  ROOTSTOCK_BRIDGE: process.env.NEXT_PUBLIC_ROOTSTOCK_BRIDGE_ADDRESS || '0x...',
+  // Rootstock Bridge - Mock address
+  ROOTSTOCK_BRIDGE: process.env.NEXT_PUBLIC_ROOTSTOCK_BRIDGE_ADDRESS || '0x0000000000000000000000000000000000000000',
 
-  // MakerDAO
-  MAKER_POT: process.env.NEXT_PUBLIC_MAKER_POT_ADDRESS || '0x...',
-  MAKER_DAI: process.env.NEXT_PUBLIC_MAKER_DAI_ADDRESS || '0x...',
+  // MakerDAO - Using deployed mocks
+  MAKER_POT: process.env.NEXT_PUBLIC_MAKER_POT_ADDRESS || '0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0',
+  MAKER_DAI: process.env.NEXT_PUBLIC_MAKER_DAI_ADDRESS || '0x5FbDB2315678afecb367f032d93F642f64180aa3', // Using USDC for now
 
-  // Aave v3
-  AAVE_V3_POOL: process.env.NEXT_PUBLIC_AAVE_V3_POOL_ADDRESS || '0x...',
-  AAVE_V3_DATA_PROVIDER: process.env.NEXT_PUBLIC_AAVE_V3_DATA_PROVIDER_ADDRESS || '0x...'
+  // Aave v3 - Using deployed mock
+  AAVE_V3_POOL: process.env.NEXT_PUBLIC_AAVE_V3_POOL_ADDRESS || '0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9',
+  AAVE_V3_DATA_PROVIDER: process.env.NEXT_PUBLIC_AAVE_V3_DATA_PROVIDER_ADDRESS || '0x0000000000000000000000000000000000000000'
 }
 
 // Complete LendingPoolIntegrated ABI
