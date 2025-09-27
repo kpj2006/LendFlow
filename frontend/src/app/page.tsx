@@ -15,6 +15,7 @@ import {
 import { GamingScene } from '@/components/three/GamingScene'
 import { StatsCard } from '@/components/ui/StatsCard'
 import { GamingButton } from '@/components/ui/GamingButton'
+import { ConnectWalletButton } from '@/components/ui/ConnectWalletButton'
 
 export default function Home() {
   const [isLoaded, setIsLoaded] = useState(false)
@@ -30,7 +31,7 @@ export default function Home() {
       <nav className="relative z-50 flex items-center justify-between p-6 bg-black/10 backdrop-blur-md border-b border-dark-border">
         <div className="flex items-center space-x-2">
           <Gamepad2 className="h-8 w-8 text-neon-pink" />
-          <span className="text-2xl font-gaming text-neon">DeFi Gaming Protocol</span>
+          <span className="text-2xl font-gaming text-neon">DeFi Protocol</span>
         </div>
         
         <div className="flex items-center space-x-4">
@@ -39,9 +40,7 @@ export default function Home() {
               Dashboard
             </GamingButton>
           </Link>
-          <GamingButton variant="primary" size="sm">
-            Connect Wallet
-          </GamingButton>
+          <ConnectWalletButton />
         </div>
       </nav>
 
