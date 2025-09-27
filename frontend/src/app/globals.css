@@ -1,0 +1,152 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&display=swap');
+
+@layer base {
+  html {
+    font-family: 'Orbitron', monospace;
+  }
+  
+  body {
+    @apply bg-dark-bg text-white antialiased;
+    background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #2a2a2a 100%);
+    min-height: 100vh;
+  }
+  
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    @apply bg-dark-bg;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    @apply bg-game-primary rounded;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-neon-pink;
+  }
+}
+
+@layer components {
+  /* Gaming button styles */
+  .btn-primary {
+    @apply bg-gradient-to-r from-game-primary to-neon-pink text-white font-semibold py-3 px-6 rounded-gaming border border-game-primary;
+    @apply hover:shadow-neon-pink transition-all duration-300 hover:scale-105;
+    @apply active:scale-95;
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+  }
+  
+  .btn-secondary {
+    @apply bg-gradient-to-r from-game-secondary to-neon-blue text-white font-semibold py-3 px-6 rounded-gaming border border-game-secondary;
+    @apply hover:shadow-neon-blue transition-all duration-300 hover:scale-105;
+    @apply active:scale-95;
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+  }
+  
+  .btn-success {
+    @apply bg-gradient-to-r from-game-success to-neon-green text-black font-semibold py-3 px-6 rounded-gaming border border-game-success;
+    @apply hover:shadow-neon-green transition-all duration-300 hover:scale-105;
+    @apply active:scale-95;
+  }
+  
+  /* Gaming card styles */
+  .game-card {
+    @apply bg-dark-card border border-dark-border rounded-gaming p-6;
+    @apply backdrop-blur-sm bg-opacity-80;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.8), 0 0 40px rgba(255, 0, 128, 0.1);
+  }
+  
+  .game-card:hover {
+    @apply border-game-primary;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.8), 0 0 40px rgba(255, 0, 128, 0.3);
+    transition: all 0.3s ease;
+  }
+  
+  /* Gaming input styles */
+  .game-input {
+    @apply bg-dark-surface border border-dark-border rounded-gaming px-4 py-3 text-white;
+    @apply focus:border-game-primary focus:ring-1 focus:ring-game-primary focus:shadow-neon-pink;
+    @apply placeholder-gray-400 transition-all duration-300;
+  }
+  
+  /* Gaming text styles */
+  .text-neon {
+    @apply text-transparent bg-clip-text bg-gradient-to-r from-neon-pink to-neon-blue;
+    animation: glow 2s ease-in-out infinite alternate;
+  }
+  
+  .text-gaming {
+    @apply font-gaming font-semibold tracking-wider;
+    text-shadow: 0 0 10px rgba(255, 0, 128, 0.5);
+  }
+  
+  /* Badge styles */
+  .badge-small {
+    @apply bg-game-small text-black px-3 py-1 rounded-full text-sm font-semibold;
+    @apply shadow-neon-green;
+  }
+  
+  .badge-whale {
+    @apply bg-game-whale text-white px-3 py-1 rounded-full text-sm font-semibold;
+    @apply shadow-neon-pink;
+  }
+  
+  /* Data table styles */
+  .data-table {
+    @apply w-full text-sm text-left;
+  }
+  
+  .data-table th {
+    @apply bg-dark-surface text-game-primary font-semibold px-4 py-3 border-b border-dark-border;
+    @apply uppercase tracking-wider;
+  }
+  
+  .data-table td {
+    @apply px-4 py-3 border-b border-dark-border;
+  }
+  
+  .data-table tr:hover {
+    @apply bg-dark-surface bg-opacity-50;
+  }
+  
+  /* Loading animation */
+  .loading-pulse {
+    @apply animate-pulse-neon;
+  }
+  
+  /* Matrix effect background */
+  .matrix-bg::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    opacity: 0.1;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0, 255, 128, 0.1) 2px,
+      rgba(0, 255, 128, 0.1) 4px
+    );
+    animation: matrix 20s linear infinite;
+  }
+}
+
+@layer utilities {
+  .text-shadow-neon {
+    text-shadow: 0 0 10px currentColor;
+  }
+  
+  .border-neon {
+    border-color: currentColor;
+    box-shadow: 0 0 10px currentColor;
+  }
+}
