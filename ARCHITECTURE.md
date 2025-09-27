@@ -2,6 +2,9 @@
 
 ## Overview
 
+![WhatsApp Image 2025-09-28 at 04 44 18_9894eb00](https://github.com/user-attachments/assets/077cecaf-2fe0-4785-a6cc-13c965e8be41)
+
+
 The DeFi Lending Protocol is built with a modular architecture that separates concerns between the frontend interface, smart contract layer, and external protocol integrations. This document provides a comprehensive overview of the system architecture.
 
 ## System Architecture
