@@ -235,6 +235,12 @@ contract LendingPoolIntegrated is ReentrancyGuard, Ownable, Pausable {
         
         return annualRate;
     }
+    // Add this helper function to your main contract
+function getBorrowerLoanChunks(
+    address borrower
+) external view returns (LoanChunk[] memory) {
+    return borrowerLoans[borrower];
+}
     
     // ===== STABLE APY INTEGRATION =====
     

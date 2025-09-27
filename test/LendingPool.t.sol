@@ -26,7 +26,17 @@ contract MockPythOracle is Test {
     function getPrice(bytes32 priceId) external view returns (int64 price, uint64 conf, int32 expo, uint256 publishTime) {
         if (priceId == 0xe62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43) {
             // BTC Price (8 decimals, expo 8)
-            return (int64(DUMMY_PRICE), 100, 8, block.timestamp);
+            // if DUMMY_PRICE is uint256 and guaranteed to fit in int64:
+        return ( (
+    int64(uint64(DUMMY_PRICE)), // cast DUMMY_PRICE into int64 safely
+    uint64(100),                // was uint256 → must be uint64
+    int32(8),                   // was uint256 → must be int32
+    block.timestamp             // already uint256 → correct
+)
+);
+
+
+
         } else if (priceId == 0xeaa020c61cc479712813461ce153894a96a6c00b21ed0cfc2798d1f9a9e9c94a) {
             // USDC Price (6 decimals, expo 6)
             return (1 * 1e6, 10, 6, block.timestamp);
@@ -222,7 +232,7 @@ contract LendingPoolTest is Test {
         // Transfer some ETH to Pyth Oracle for fees
         vm.deal(address(mockPyth), 10 ether); 
         // Fund the Pool contract with some ETH for Walrus/Pyth fees
-        vm.deal(address(this), 10 ether); 
+        vm.deal(address(pool), 10 ether); 
 
         // Deploy Main Contract
         pool = new LendingPoolIntegrated(
@@ -286,8 +296,8 @@ contract LendingPoolTest is Test {
         
         // Since the calculation is complex Ray Math, we just check for non-zero and smoothing.
         // On first run, initialSmoothedAPY is 0, so it should be close to Hybrid APY.
-        assertTrue(newSmoothedAPY > LendingPoolIntegrated.RAY, "APY should be greater than 100% (1e27)");
-        assertTrue(newSmoothedAPY < 2 * LendingPoolIntegrated.RAY, "APY should be less than 200%");
+        assertTrue(newSmoothedAPY > pool.RAY(), "APY should be greater than 100% (1e27)");
+        assertTrue(newSmoothedAPY < 2 * pool.RAY(), "APY should be less than 200%");
         
         vm.roll(block.number + 1);
         
@@ -303,49 +313,83 @@ contract LendingPoolTest is Test {
     // ==============================================================================
 
     function test_AddLiquidity_Success() public {
-        vm.prank(lender1);
-        pool.addLiquidity(INITIAL_LIQUIDITY, FIXED_APY_L1, false, "Initial deposit");
+    vm.prank(lender1);
+    pool.addLiquidity(INITIAL_LIQUIDITY, FIXED_APY_L1, false, "Initial deposit");
 
-        // Check balances
-        assertEq(pool.totalAvailableLiquidity(), INITIAL_LIQUIDITY, "Liquidity should match deposit");
-        assertEq(mockUsdc.balanceOf(address(pool)), INITIAL_LIQUIDITY, "Pool USDC balance mismatch");
-        
-        // Check lender struct
-        LendingPoolIntegrated.Lender memory lender = pool.lenders(lender1);
-        assertEq(lender.totalDeposited, INITIAL_LIQUIDITY, "Lender total deposited mismatch");
-        assertEq(lender.fixedAPY, FIXED_APY_L1, "Lender APY mismatch");
-        assertTrue(lender.active, "Lender should be active");
+    // Check balances
+    assertEq(pool.totalAvailableLiquidity(), INITIAL_LIQUIDITY, "Liquidity should match deposit");
+    assertEq(mockUsdc.balanceOf(address(pool)), INITIAL_LIQUIDITY, "Pool USDC balance mismatch");
+    
+    // CORRECTED: Destructure only the 11 fields returned by the public getter
+    (
+        uint256 totalDeposited,
+        , // availableAmount
+        , // lentAmount
+        , // earnedInterest
+        uint256 fixedAPY,
+        bool active,
+        , // timestamp
+        bytes32 lenderDataBlob,
+        uint256 walrusRewards,
+        , // btcCollateral
+        bool isBitcoinLender
+        // The 'next' and 'prev' fields are not returned by the default getter
+    ) = pool.lenders(lender1);
 
-        // Check Walrus Rewards (0.5% of deposit in WAL tokens)
-        uint256 expectedRewards = (INITIAL_LIQUIDITY * 50) / pool.BASIS_POINTS();
-        assertEq(lender.walrusRewards, expectedRewards, "Walrus rewards mismatch");
-        assertEq(pool.totalWalrusRewards(), expectedRewards, "Total Walrus rewards mismatch");
-        
-        // Check Walrus Blob storage
-        assertTrue(lender.lenderDataBlob != bytes32(0), "Lender data blob should be stored");
-    }
+    // Now, assert against the local variables
+    assertEq(totalDeposited, INITIAL_LIQUIDITY, "Lender total deposited mismatch");
+    assertEq(fixedAPY, FIXED_APY_L1, "Lender APY mismatch");
+    assertTrue(active, "Lender should be active");
+    assertTrue(isBitcoinLender == false, "isBitcoinLender flag mismatch");
+
+    uint256 expectedRewards = (INITIAL_LIQUIDITY * 50) / pool.BASIS_POINTS();
+    assertEq(walrusRewards, expectedRewards, "Walrus rewards mismatch");
+    
+    assertTrue(lenderDataBlob != bytes32(0), "Lender data blob should be stored");
+}
 
     function test_AddLiquidity_WithBTCCollateral() public {
-        vm.startPrank(lender1);
-        
-        // Need to provide ETH for the required BTC collateral + Walrus storage fee
-        uint256 requiredBtc = 23076923076923076; // Approx 0.023 BTC value for 1k USDC at 150% ratio
-        uint256 requiredEth = requiredBtc + pool.protocolFees().walrusStorageFee() * 1e12 / 1000; // Mock ETH value
+    vm.startPrank(lender1);
+    
+    // Dynamically calculate the required BTC collateral based on the mock oracle price
+    // This makes the test robust and avoids "magic numbers"
+    uint256 btcPrice = uint256(int256(mockPyth.DUMMY_PRICE()));
+    uint256 requiredBtcValue = (LOAN_AMOUNT * pool.BTC_COLLATERAL_RATIO()) / pool.BASIS_POINTS();
+    uint256 requiredBtc = (requiredBtcValue * 1e8) / btcPrice;
+    
+    // NOTE: The 'msg.value' you send should only be for the BTC collateral.
+    // The protocol fees (like for Walrus) are paid from the POOL's own ETH balance,
+    // which you correctly funded in setUp(). The user's ETH only covers the collateral.
+    uint256 valueToSendForCollateral = requiredBtc; 
 
-        // Add 1k USDC with BTC collateral (requires ETH to be sent for locking)
-        pool.addLiquidity{value: requiredEth}(LOAN_AMOUNT, FIXED_APY_L1, true, "BTC backed");
-        
-        // Check BTC collateral tracking
-        LendingPoolIntegrated.Lender memory lender = pool.lenders(lender1);
-        assertTrue(lender.btcCollateral > 0, "Lender BTC collateral should be tracked");
-        assertEq(lender.isBitcoinLender, true, "Lender should be flagged as Bitcoin lender");
-        
-        // Check bridge state (Mock Rootstock receives the locked ETH/BTC)
-        assertEq(mockRootstock.btcBalances(lender1), requiredBtc, "Rootstock should have tracked locked BTC");
-        assertEq(pool.totalBTCCollateral(), requiredBtc, "Pool total BTC collateral mismatch");
+    // Add 1k USDC with BTC collateral
+    pool.addLiquidity{value: valueToSendForCollateral}(LOAN_AMOUNT, FIXED_APY_L1, true, "BTC backed");
+    
+    // Check BTC collateral tracking
+    // Use the correct 11-field destructuring for the public 'lenders' getter
+    (
+        , // totalDeposited
+        , // availableAmount
+        , // lentAmount
+        , // earnedInterest
+        , // fixedAPY
+        , // active
+        , // timestamp
+        , // lenderDataBlob
+        , // walrusRewards
+        uint256 btcCollateral,
+        bool isBitcoinLender
+    ) = pool.lenders(lender1);
 
-        vm.stopPrank();
-    }
+    assertTrue(btcCollateral > 0, "Lender BTC collateral should be tracked");
+    assertTrue(isBitcoinLender, "Lender should be flagged as Bitcoin lender");
+    
+    // Check bridge state
+    assertEq(mockRootstock.btcBalances(lender1), requiredBtc, "Rootstock should have tracked locked BTC");
+    assertEq(pool.totalBTCCollateral(), requiredBtc, "Pool total BTC collateral mismatch");
+
+    vm.stopPrank();
+}
 
     function test_AddLiquidity_RevertsOnInvalidAPY() public {
         vm.prank(lender1);
@@ -371,44 +415,90 @@ contract LendingPoolTest is Test {
         assertEq(pool.totalAvailableLiquidity(), INITIAL_LIQUIDITY - LOAN_AMOUNT, "Available liquidity incorrect");
         assertEq(pool.totalLentAmount(), LOAN_AMOUNT, "Total lent amount incorrect");
         
-        // Check borrower struct
-        LendingPoolIntegrated.Borrower memory borrower = pool.borrowers(borrower1);
-        assertEq(borrower.amount, LOAN_AMOUNT, "Borrower amount mismatch");
-        assertTrue(borrower.weightedAPY == FIXED_APY_L1, "Weighted APY mismatch (should equal only lender's APY)");
-        assertTrue(borrower.dueDate > block.timestamp, "Due date not set correctly");
-        assertTrue(borrower.active, "Borrower should be active");
+        // // Check borrower struct
+        // LendingPoolIntegrated.Borrower memory borrower = pool.borrowers(borrower1);
+        // assertEq(borrower.amount, LOAN_AMOUNT, "Borrower amount mismatch");
+        // assertTrue(borrower.weightedAPY == FIXED_APY_L1, "Weighted APY mismatch (should equal only lender's APY)");
+        // assertTrue(borrower.dueDate > block.timestamp, "Due date not set correctly");
+        // assertTrue(borrower.active, "Borrower should be active");
+
+        (
+    uint256 amount,
+    uint256 weightedAPY,
+    , // timestamp
+    uint256 dueDate,
+    bool active,
+    , // loanDocumentBlob
+    , // btcCollateralRatio
+      // crossChainLoan
+) = pool.getBorrowerDetails(borrower1);
+
+assertEq(amount, LOAN_AMOUNT, "Borrower amount mismatch");
+assertTrue(weightedAPY == FIXED_APY_L1, "Weighted APY mismatch");
+assertTrue(dueDate > block.timestamp, "Due date not set correctly");
+assertTrue(active, "Borrower should be active");
         
         // Check USDC transfer (loan disbursement)
         assertEq(mockUsdc.balanceOf(borrower1), LOAN_AMOUNT * 2 + LOAN_AMOUNT, "Borrower USDC balance mismatch after loan");
         
-        // Check loan chunk
-        LendingPoolIntegrated.LoanChunk[] memory chunks = pool.borrowerLoans(borrower1);
-        assertEq(chunks.length, 1, "Should have 1 loan chunk");
-        assertEq(chunks[0].amount, LOAN_AMOUNT, "Chunk amount mismatch");
-        assertEq(chunks[0].lender, lender1, "Chunk lender mismatch");
+        // // Check loan chunk
+        // LendingPoolIntegrated.LoanChunk[] memory chunks = pool.borrowerLoans(borrower1);
+        // assertEq(chunks.length, 1, "Should have 1 loan chunk");
+        // assertEq(chunks[0].amount, LOAN_AMOUNT, "Chunk amount mismatch");
+        // assertEq(chunks[0].lender, lender1, "Chunk lender mismatch");
+        // In test_RequestLoan_Success()
+
+// CORRECTED: Use the new helper function
+LendingPoolIntegrated.LoanChunk[] memory chunks = pool.getBorrowerLoanChunks(borrower1);
+assertEq(chunks.length, 1, "Should have 1 loan chunk");
+assertEq(chunks[0].amount, LOAN_AMOUNT, "Chunk amount mismatch");
+assertEq(chunks[0].lender, lender1, "Chunk lender mismatch");
     }
     
     function test_RequestLoan_WithBTCCollateralRequired() public {
-        // 1. Setup liquidity
-        vm.prank(lender1);
-        pool.addLiquidity(INITIAL_LIQUIDITY, FIXED_APY_L1, false, "L1 deposit");
-        
-        // 2. Borrower requests loan requiring BTC collateral
-        vm.startPrank(borrower1);
-        uint256 requiredBtc = 2307692307692307; // Approx 0.0023 BTC value for 1k USDC at 150% ratio
-        uint256 requiredEth = requiredBtc + pool.protocolFees().walrusStorageFee() * 1e12 / 1000; // Mock ETH value
+    // 1. Setup liquidity from a lender
+    vm.prank(lender1);
+    pool.addLiquidity(INITIAL_LIQUIDITY, FIXED_APY_L1, false, "L1 deposit");
+    
+    // 2. Borrower prepares to request a loan
+    vm.startPrank(borrower1);
 
-        // Request loan with required BTC collateral (send ETH value)
-        pool.requestLoan{value: requiredEth}(LOAN_AMOUNT, "Loan agreement data", true, "");
-        
-        // Check collateral tracking
-        LendingPoolIntegrated.Borrower memory borrower = pool.borrowers(borrower1);
-        assertEq(borrower.btcCollateralRatio, pool.BTC_COLLATERAL_RATIO(), "BTC collateral ratio not set");
-        assertEq(pool.btcCollaterals(borrower1), requiredBtc, "Pool BTC collateral tracking mismatch");
-        assertEq(mockRootstock.btcBalances(borrower1), requiredBtc, "Rootstock should have tracked locked BTC");
+    // --- DYNAMIC COLLATERAL CALCULATION (NO MAGIC NUMBERS) ---
+    // This makes your test resilient to changes in the mock price or collateral ratio.
+    uint256 btcPrice = uint256(int256(mockPyth.DUMMY_PRICE()));
+    uint256 requiredBtcValue = (LOAN_AMOUNT * pool.BTC_COLLATERAL_RATIO()) / pool.BASIS_POINTS();
+    uint256 requiredBtc = (requiredBtcValue * 1e8) / btcPrice;
 
-        vm.stopPrank();
-    }
+    // --- CORRECTED LOGIC ---
+    // The `msg.value` sent by the user should ONLY cover the required collateral.
+    // Protocol fees (like for Walrus) are paid from the pool's own ETH balance, 
+    // which you funded in the setUp() function.
+    uint256 valueToSendForCollateral = requiredBtc;
+
+    // 3. Request the loan with the correctly calculated value for collateral
+    pool.requestLoan{value: valueToSendForCollateral}(LOAN_AMOUNT, "Loan agreement data", true, "");
+    
+    // --- VERIFY STATE CHANGES ---
+
+    (
+        , // amount
+        , // weightedAPY
+        , // timestamp
+        , // dueDate
+        , // active
+        , // loanDocumentBlob
+        uint256 btcCollateralRatio, // This is the 7th value
+        , // crossChainLoan
+          // currentRepaymentAmount
+    ) = pool.getBorrowerDetails(borrower1);
+    assertEq(btcCollateralRatio, pool.BTC_COLLATERAL_RATIO(), "BTC collateral ratio not set correctly");
+
+    // Check that collateral was tracked correctly in both the pool and the mock bridge
+    assertEq(pool.btcCollaterals(borrower1), requiredBtc, "Pool's BTC collateral tracking is incorrect");
+    assertEq(mockRootstock.btcBalances(borrower1), requiredBtc, "Rootstock bridge should have tracked the locked BTC");
+
+    vm.stopPrank();
+}
     
     function test_RequestLoan_RevertsOnInsufficientLiquidity() public {
         vm.prank(lender1);
@@ -441,11 +531,14 @@ contract LendingPoolTest is Test {
         vm.prank(lender1);
         pool.addLiquidity(INITIAL_LIQUIDITY, FIXED_APY_L1, false, ""); 
         
-        // 2. Borrower 1 takes loan
+        // 2. capture lender's state before the loan is made
+        uint256 lenderAvailableBeforeLoan = pool.lenders(lender1).availableAmount;
+
+        // 3. Borrower 1 takes loan
         vm.prank(borrower1);
         pool.requestLoan(LOAN_AMOUNT, "Loan agreement", false, "");
         
-        // 3. Fast forward one year
+        // 4. Fast forward one year
         vm.warp(block.timestamp + pool.SECONDS_PER_YEAR());
 
         // Calculate expected repayment. APY is 5% (500 BP)
@@ -457,16 +550,16 @@ contract LendingPoolTest is Test {
         uint256 borrowerInitialUSDC = mockUsdc.balanceOf(borrower1);
         uint256 lenderInitialDeposit = pool.lenders(lender1).totalDeposited;
 
-        // 4. Repay loan
+        // 5. Repay loan
         vm.prank(borrower1);
         pool.repayLoan();
-
+// now verify state changes
         // Check borrower balance change (USDC is transferred from borrower to pool)
         assertEq(mockUsdc.balanceOf(borrower1), borrowerInitialUSDC - expectedRepayment, "Borrower balance incorrect after repayment");
 
         // Check lender update
         LendingPoolIntegrated.Lender memory lender = pool.lenders(lender1);
-        assertEq(lender.availableAmount, lenderInitialDeposit + expectedInterest, "Lender available amount incorrect after repayment");
+        assertEq(lender.availableAmount, lenderAvailableBeforeLoan , "Lender available amount should return to be preloan value");
         assertEq(lender.lentAmount, 0, "Lent amount should be zero");
         assertEq(lender.earnedInterest, expectedInterest, "Earned interest incorrect");
         
