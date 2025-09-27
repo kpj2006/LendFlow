@@ -197,8 +197,7 @@ export default function LenderInterface() {
     return formatUnits(amount, 8)
   }
 
-  const isInValidRange = apy && minAPY && maxAPY && 
-    (parseFloat(apy) * 100 >= Number(minAPY) && parseFloat(apy) * 100 <= Number(maxAPY))
+  const isInValidRange = apy && (parseFloat(apy) >= 3.6 && parseFloat(apy) <= 4.0)
 
   const hasBalance = usdcBalance && Number(usdcBalance) > 0
   const sufficientBalance = hasBalance && parseFloat(amount || '0') <= parseFloat(formatUSDC(usdcBalance) || '0')
@@ -337,22 +336,20 @@ export default function LenderInterface() {
                   )}
                 </div>
                 
-                {minAPY && maxAPY && stableAPY > 0 && (
-                  <div className="p-3 bg-cyan-900/20 border border-cyan-500/30 rounded-lg">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-cyan-300 flex items-center">
-                        <PieChart className="h-4 w-4 mr-1" />
-                        Allowed Range:
-                      </span>
-                      <span className="font-mono text-cyan-400">
-                        {formatBasisPoints(minAPY)} - {formatBasisPoints(maxAPY)}
-                      </span>
-                    </div>
-                    <div className="text-xs text-cyan-300/70 mt-1">
-                      ±0.2% variance from market reference rate
-                    </div>
+                <div className="p-3 bg-cyan-900/20 border border-cyan-500/30 rounded-lg">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-cyan-300 flex items-center">
+                      <PieChart className="h-4 w-4 mr-1" />
+                      Target APY Range:
+                    </span>
+                    <span className="font-mono text-cyan-400">
+                      3.6% - 4.0%
+                    </span>
                   </div>
-                )}
+                  <div className="text-xs text-cyan-300/70 mt-1">
+                    3.8% ±0.2% fixed range optimized for stability
+                  </div>
+                </div>
                 
                 {!isInValidRange && apy && minAPY && maxAPY && (
                   <div className="flex items-center p-3 bg-red-900/20 border border-red-500/30 rounded-lg text-sm text-red-400">
