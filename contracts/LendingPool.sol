@@ -333,6 +333,11 @@ function getBorrowerLoanChunks(
     function getStableAPY() external view returns (uint256) {
         return smoothedAPY;
     }
+
+    
+function getBorrowerList() external view returns (address[] memory) {
+    return borrowerList;
+}
     
     // Enhanced liquidity addition with multi-protocol support
     function addLiquidity(
