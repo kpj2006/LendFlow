@@ -175,9 +175,8 @@ export default function LenderInterface() {
 
   const formatAPY = (apyValue) => {
     if (!apyValue) return '0.00%'
-    // Convert from basis points to percentage
-    // 455 basis points = 4.55%
-    const percentage = Number(apyValue) / 100
+    // Convert from ray (1e27) to percentage
+    const percentage = (Number(apyValue) / 1e27) * 100
     return `${percentage.toFixed(2)}%`
   }
 
@@ -271,19 +270,46 @@ export default function LenderInterface() {
                 Target APY Rate (%)
               </label>
               <div className="relative">
-                <input
-                  type="number"
-                  step="0.01"
-                  min={minAPY ? (Number(minAPY) / 100).toFixed(2) : '0'}
-                  max={maxAPY ? (Number(maxAPY) / 100).toFixed(2) : '50'}
-                  value={apy}
-                  onChange={(e) => setApy(e.target.value)}
-                  className={`input-field pl-12 ${
-                    !isInValidRange && apy ? 'border-red-500' : ''
-                  }`}
-                  placeholder="Enter target APY"
-                />
-                <Target className="h-5 w-5 text-gray-400 absolute left-4 top-1/2 transform -translate-y-1/2" />
+                {/* APY Display */}
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center">
+                    <Target className="h-5 w-5 text-cyan-400 mr-2" />
+                    <span className="text-lg font-mono text-cyan-400">{parseFloat(apy).toFixed(2)}%</span>
+                  </div>
+                  <div className="text-sm text-gray-400">
+                    Range: 3.60% - 4.00%
+                  </div>
+                </div>
+                
+                {/* Gaming-style Slider */}
+                <div className="relative">
+                  <input
+                    type="range"
+                    min="3.6"
+                    max="4.0"
+                    step="0.01"
+                    value={apy}
+                    onChange={(e) => setApy(e.target.value)}
+                    className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer slider-thumb"
+                    style={{
+                      background: `linear-gradient(to right, #06b6d4 0%, #06b6d4 ${((parseFloat(apy) - 3.6) / 0.4) * 100}%, #374151 ${((parseFloat(apy) - 3.6) / 0.4) * 100}%, #374151 100%)`
+                    }}
+                  />
+                  
+                  {/* Slider Labels */}
+                  <div className="flex justify-between text-xs text-gray-500 mt-2">
+                    <span>3.60%</span>
+                    <span className="text-cyan-400">3.80%</span>
+                    <span>4.00%</span>
+                  </div>
+                  
+                  {/* Slider Markers */}
+                  <div className="absolute top-0 left-0 w-full h-2 flex justify-between items-center pointer-events-none">
+                    <div className="w-0.5 h-4 bg-gray-600 -mt-1"></div>
+                    <div className="w-0.5 h-4 bg-cyan-400 -mt-1"></div>
+                    <div className="w-0.5 h-4 bg-gray-600 -mt-1"></div>
+                  </div>
+                </div>
               </div>
               
               {/* APY Information Panel */}
