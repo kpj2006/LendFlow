@@ -21,12 +21,10 @@ contract MockCETH is ERC20, Ownable {
     
     // ============= FAUCET FOR TESTERS ONLY =============
     // Public faucet for getting collateral cETH for testing borrowing
-    // NOTE: This is only for testing purposes on testnet
-    mapping(address => uint256) public lastFaucetTime;
+    // NOTE: This is only for testing purposes on testnet - NO RESTRICTIONS!
     
     function faucet() external {
-        require(block.timestamp >= lastFaucetTime[msg.sender] + 1 days, "Faucet: wait 24 hours between claims");
-        lastFaucetTime[msg.sender] = block.timestamp;
+        // No cooldown - anyone can mint anytime for testing
         _mint(msg.sender, 1000 * 10**18); // Mint 1000 cETH for collateral testing
     }
     

@@ -376,7 +376,7 @@ export default function BorrowerInterface() {
 
           <div className="space-y-3">
             <p className="text-orange-700 text-sm">
-              Get test cETH tokens for collateral. Limited to 1,000 cETH per day.
+              Get test cETH tokens for collateral. Get 1,000 cETH anytime!
             </p>
             
             <div className="flex items-center justify-between text-sm">
@@ -393,7 +393,7 @@ export default function BorrowerInterface() {
             </button>
             
             <p className="text-xs text-orange-600">
-              ⏰ 24-hour cooldown between claims.
+              🎉 No cooldown! Mint as many times as needed for testing.
             </p>
           </div>
         </div>

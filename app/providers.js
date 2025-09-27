@@ -27,7 +27,15 @@ const rootstockTestnet = {
 
 const { chains, publicClient } = configureChains(
   [rootstockTestnet], // Only Rootstock testnet for this dapp
-  [publicProvider()]
+  [publicProvider({
+    // Add multiple RPC endpoints for better reliability
+    rpc: (chain) => ({
+      http: chain.id === 31 ? [
+        'https://public-node.testnet.rsk.co',
+        'https://mycrypto.testnet.rsk.co'
+      ] : null
+    })
+  })]
 )
 
 const { connectors } = getDefaultWallets({

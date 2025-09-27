@@ -1,7 +1,9 @@
 'use client'
 
 import { useNetwork, useSwitchNetwork } from 'wagmi'
-import { AlertTriangle, CheckCircle, ExternalLink } from 'lucide-react'
+import { AlertTriangle, CheckCircle, ExternalLink, Plus } from 'lucide-react'
+import { addRootstockTestnet, switchToRootstockTestnet } from '../utils/network-utils'
+import { useState } from 'react'
 
 const REQUIRED_NETWORK = {
   id: 31,
@@ -15,9 +17,22 @@ const REQUIRED_NETWORK = {
 export default function NetworkValidator() {
   const { chain } = useNetwork()
   const { switchNetwork, isLoading: isSwitching } = useSwitchNetwork()
+  const [isAddingNetwork, setIsAddingNetwork] = useState(false)
 
   const isCorrectNetwork = chain?.id === REQUIRED_NETWORK.id
   const isConnected = !!chain
+
+  const handleAddNetwork = async () => {
+    setIsAddingNetwork(true)
+    try {
+      await addRootstockTestnet()
+    } catch (error) {
+      console.error('Failed to add network:', error)
+      alert('Failed to add Rootstock Testnet. Please add it manually.')
+    } finally {
+      setIsAddingNetwork(false)
+    }
+  }
 
   if (!isConnected) {
     return (
@@ -99,22 +114,32 @@ export default function NetworkValidator() {
           </div>
 
           <div className="flex flex-col sm:flex-row gap-3">
+            <button
+              onClick={handleAddNetwork}
+              disabled={isAddingNetwork}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              {isAddingNetwork ? 'Adding Network...' : 'Add Rootstock Testnet'}
+            </button>
+            
             {switchNetwork && (
               <button
                 onClick={() => switchNetwork(REQUIRED_NETWORK.id)}
                 disabled={isSwitching}
                 className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
               >
-                {isSwitching ? 'Switching...' : `Switch to ${REQUIRED_NETWORK.name}`}
+                {isSwitching ? 'Switching...' : `Switch Network`}
               </button>
             )}
+            
             <a
               href="https://dev.rootstock.io/wallet/use/metamask/"
               target="_blank"
               rel="noopener noreferrer"
               className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg font-medium text-center flex items-center justify-center"
             >
-              Manual Setup Guide
+              Manual Guide
               <ExternalLink className="h-4 w-4 ml-2" />
             </a>
           </div>

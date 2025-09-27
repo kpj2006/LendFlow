@@ -160,8 +160,9 @@ export default function LenderInterface() {
 
   const formatAPY = (apyValue) => {
     if (!apyValue) return '0.00%'
-    // Convert from ray (1e27) to percentage
-    const percentage = (Number(apyValue) / 1e27) * 100
+    // Convert from basis points to percentage
+    // 455 basis points = 4.55%
+    const percentage = Number(apyValue) / 100
     return `${percentage.toFixed(2)}%`
   }
 
