@@ -19,9 +19,28 @@ export default function LenderInterface() {
   const [useBitcoinCollateral, setUseBitcoinCollateral] = useState(false)
   const [lenderMetadata, setLenderMetadata] = useState('')
   const [walrusMetadata, setWalrusMetadata] = useState(null)
+  const [isLoading, setIsLoading] = useState(false)
 
   // Walrus storage hook - must be called before useEffect that uses it
   const { storeLendingData, retrieveLendingData, isLoading: walrusLoading, error: walrusError } = useLendingDataStorage()
+
+  // Get user's USDC balance
+  const { data: usdcBalance } = useContractRead({
+    address: USDC_ADDRESS,
+    abi: USDC_ABI,
+    functionName: 'balanceOf',
+    args: [address],
+    watch: true
+  })
+
+  // Get lender details (enhanced)
+  const { data: lenderDetails } = useContractRead({
+    address: LENDING_POOL_ADDRESS,
+    abi: LENDING_POOL_ABI,
+    functionName: 'getLenderDetails',
+    args: [address],
+    watch: true
+  })
 
   // Load Walrus metadata on component mount
   useEffect(() => {

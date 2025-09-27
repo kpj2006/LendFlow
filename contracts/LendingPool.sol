@@ -106,7 +106,6 @@ contract LendingPoolIntegrated is ReentrancyGuard, Ownable, Pausable {
     ProtocolFees public protocolFees;
     
     // Constants
-    uint256 public constant WHALE_THRESHOLD = 1000 * 10**6;
     uint256 public constant BASIS_POINTS = 10000;
     uint256 public constant LOAN_DURATION = 30 days;
     
@@ -321,12 +320,20 @@ contract LendingPoolIntegrated is ReentrancyGuard, Ownable, Pausable {
         LoanChunk[] storage loanChunks = borrowerLoans[msg.sender];
         uint256 remainingAmount = amount;
         
-        if (amount <= WHALE_THRESHOLD) {
-            remainingAmount = _matchSmallBorrowerEnhanced(amount, loanChunks);
-        } else {
-            remainingAmount = _matchWhaleBorrowerEnhanced(amount, loanChunks);
-        }
+        // --- NEW DYNAMIC BORROWER CLASSIFICATION ---
+    // Calculate the threshold as 5% of the current available liquidity.
+    uint256 dynamicThreshold = (totalAvailableLiquidity * 5) / 100;
         
+        // Determine matching strategy based on the loan's size relative to the pool.
+    if (amount <= dynamicThreshold) {
+        // Loan is 5% or less of the pool -> considered "small".
+        // Match with the cheapest lenders first.
+        remainingAmount = _matchSmallBorrowerEnhanced(amount, loanChunks);
+    } else {
+        // Loan is more than 5% of the pool -> considered "big".
+        // Match with the most expensive (eager) lenders first to ensure it gets filled.
+        remainingAmount = _matchWhaleBorrowerEnhanced(amount, loanChunks);
+    }
         require(remainingAmount == 0, "Could not match full loan amount");
         
         uint256 weightedAPY = _calculateWeightedAPYFixed(loanChunks, amount);
@@ -658,14 +665,15 @@ contract LendingPoolIntegrated is ReentrancyGuard, Ownable, Pausable {
         LoanChunk[] memory chunks,
         uint256 weightedAPY,
         uint256 estimatedWalrusStorageCost
+       
     ) {
         require(amount <= totalAvailableLiquidity, "Insufficient liquidity for simulation");
-        
+         uint256 dynamicThreshold = (totalAvailableLiquidity * 5) / 100;
         LoanChunk[] memory tempChunks = new LoanChunk[](lenderList.length);
         uint256 chunkCount = 0;
         uint256 remainingAmount = amount;
         
-        address[] memory sortedLenders = _getLendersSortedByAPY(amount <= WHALE_THRESHOLD);
+        address[] memory sortedLenders = _getLendersSortedByAPY(amount <= dynamicThreshold);
         
         for (uint256 i = 0; i < sortedLenders.length && remainingAmount > 0; i++) {
             address lenderAddr = sortedLenders[i];

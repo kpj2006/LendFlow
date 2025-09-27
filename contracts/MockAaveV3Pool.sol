@@ -2,8 +2,18 @@
 pragma solidity ^0.8.19;
 
 contract MockAaveV3Pool {
-    // Mock reserve data for USDC
-    uint256 public constant USDC_LIQUIDITY_RATE = 35000000000000000000000000; // ~3.5% APY in ray
+    // Mock reserve data for USDC - HARDCODED APY VALUES
+    // Since we cannot fetch real-time Aave v3 APY in test environment,
+    // we use static values that represent realistic lending rates
+
+    // 3.5% APY in ray format (1e27 = 100%)
+    // Formula: rate = (APY * RAY) / SECONDS_PER_YEAR
+    // 0.035 * 1e27 / 31536000 ≈ 3.5e25
+    uint256 public constant USDC_LIQUIDITY_RATE = 35000000000000000000000000; // 3.5% APY
+
+    // Alternative APY values for testing different scenarios:
+    // uint256 public constant USDC_LIQUIDITY_RATE = 20000000000000000000000000; // 2.0% APY
+    // uint256 public constant USDC_LIQUIDITY_RATE = 50000000000000000000000000; // 5.0% APY
 
     function getReserveData(address asset) external view returns (
         uint256 configuration,
