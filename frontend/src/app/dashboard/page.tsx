@@ -13,6 +13,7 @@ import {
 } from 'lucide-react'
 import { StatsCard } from '@/components/ui/StatsCard'
 import { GamingButton } from '@/components/ui/GamingButton'
+import { ConnectWalletButton } from '@/components/ui/ConnectWalletButton'
 import { APYChart } from '@/components/charts/APYChart'
 import { OrderbookPreview } from '@/components/orderbook/OrderbookPreview'
 import { generateMockData } from '@/lib/utils'
@@ -62,9 +63,7 @@ export default function Dashboard() {
             <RefreshCw className="mr-2 h-4 w-4" />
             Refresh
           </GamingButton>
-          <GamingButton variant="primary" size="sm">
-            Connect Wallet
-          </GamingButton>
+          <ConnectWalletButton />
         </div>
       </nav>
 
