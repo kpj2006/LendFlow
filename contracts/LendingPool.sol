@@ -47,6 +47,7 @@ interface IAaveV3Pool {
 contract LendingPoolIntegrated is ReentrancyGuard, Ownable, Pausable {
     // Core tokens
     IERC20 public immutable usdcToken;
+    IERC20 public immutable cethToken;  // Collateral token (cETH)
     
     // Protocol integrations
     IRootstockBridge public rootstockBridge;
@@ -71,7 +72,8 @@ contract LendingPoolIntegrated is ReentrancyGuard, Ownable, Pausable {
     }
     
     struct Borrower {
-        uint256 amount;
+        uint256 amount;              // USDC borrowed amount
+        uint256 collateralAmount;   // cETH collateral deposited
         uint256 weightedAPY;
         uint256 timestamp;
         uint256 dueDate;
@@ -108,26 +110,29 @@ contract LendingPoolIntegrated is ReentrancyGuard, Ownable, Pausable {
     // Constants
     uint256 public constant BASIS_POINTS = 10000;
     uint256 public constant LOAN_DURATION = 30 days;
-    
-    uint256 public minAPY = 100; // 1%
-    uint256 public maxAPY = 2000; // 20%
+    uint256 public constant COLLATERAL_RATIO = 15000; // 150% collateral ratio (150 * 100)
+    uint256 public constant APY_DELTA = 20; // 0.2% delta (0.002 * 10000 basis points)
     
     // Events
     event LenderAdded(address indexed lender, uint256 amount, uint256 apy);
-    event BorrowerMatched(address indexed borrower, uint256 amount, uint256 weightedAPY, uint256 dueDate);
+    event BorrowerMatched(address indexed borrower, uint256 amount, uint256 collateral, uint256 weightedAPY, uint256 dueDate);
     event LoanRepaid(address indexed borrower, uint256 principal, uint256 interest);
-    event LoanLiquidated(address indexed borrower, uint256 amount);
+    event LoanLiquidated(address indexed borrower, uint256 amount, uint256 collateralSeized);
     event LiquidityWithdrawn(address indexed lender, uint256 amount);
     event InterestClaimed(address indexed lender, uint256 interest);
     event CrossChainLoanExecuted(address indexed borrower, uint256 amount, string targetChain);
+    event CollateralDeposited(address indexed borrower, uint256 collateralAmount);
+    event CollateralWithdrawn(address indexed borrower, uint256 collateralAmount);
     
     constructor(
         address _usdcToken,
+        address _cethToken,
         address _rootstockBridge,
         address _makerPot,
         address _aavePool
     ) {
         usdcToken = IERC20(_usdcToken);
+        cethToken = IERC20(_cethToken);
         rootstockBridge = IRootstockBridge(_rootstockBridge);
         pot = IPot(_makerPot);
         aavePool = IAaveV3Pool(_aavePool);
@@ -181,20 +186,17 @@ contract LendingPoolIntegrated is ReentrancyGuard, Ownable, Pausable {
     
     // ===== STABLE APY INTEGRATION =====
     
-    /// @notice Fetch MakerDAO DSR (Dai Savings Rate) and annualize it
+    /// @notice Fetch MakerDAO DSR (Dai Savings Rate) - already annualized
     /// @return Annualized DSR in ray format (1e27 = 100%)
     function _fetchMakerDSR() internal returns (uint256) {
         // Call drip() to sync chi with latest accrued interest
         pot.drip();
         
-        // Get current DSR (instantaneous rate in ray)
+        // Get current DSR (already annualized at 5% APY in ray format)
         uint256 dsr = pot.dsr();
         
-        // Annualize using rpow: dsr^secondsPerYear
-        // This gives us the effective annual rate
-        uint256 annualizedDSR = rpow(dsr, SECONDS_PER_YEAR, RAY);
-        
-        return annualizedDSR;
+        // MockMakerPot now returns annualized rate directly
+        return dsr;
     }
     
     /// @notice Fetch Aave v3 USDC supply APY
@@ -271,6 +273,35 @@ contract LendingPoolIntegrated is ReentrancyGuard, Ownable, Pausable {
         return smoothedAPY;
     }
     
+    /// @notice Get minimum allowed APY (stableAPY - 0.2%)
+    /// @return Minimum APY in basis points
+    function getMinAPY() public view returns (uint256) {
+        if (smoothedAPY == 0) return 100; // Fallback to 1% if not initialized
+        
+        // Convert ray to basis points: smoothedAPY / RAY * BASIS_POINTS
+        uint256 stableAPYBasisPoints = (smoothedAPY * BASIS_POINTS) / RAY;
+        
+        // Ensure we don't go below 0.1% (10 basis points)
+        if (stableAPYBasisPoints <= APY_DELTA + 10) {
+            return 10;
+        }
+        
+        return stableAPYBasisPoints - APY_DELTA;
+    }
+    
+    /// @notice Get maximum allowed APY (stableAPY + 0.2%)
+    /// @return Maximum APY in basis points
+    function getMaxAPY() public view returns (uint256) {
+        if (smoothedAPY == 0) return 2000; // Fallback to 20% if not initialized
+        
+        // Convert ray to basis points: smoothedAPY / RAY * BASIS_POINTS
+        uint256 stableAPYBasisPoints = (smoothedAPY * BASIS_POINTS) / RAY;
+        
+        // Cap at reasonable maximum (50%)
+        uint256 maxAllowed = stableAPYBasisPoints + APY_DELTA;
+        return maxAllowed > 5000 ? 5000 : maxAllowed;
+    }
+    
     // Enhanced liquidity addition with multi-protocol support
     function addLiquidity(
         uint256 amount, 
@@ -278,7 +309,12 @@ contract LendingPoolIntegrated is ReentrancyGuard, Ownable, Pausable {
         bytes calldata lenderMetadata
     ) external nonReentrant whenNotPaused {
         require(amount > 0, "Amount must be greater than 0");
-        require(fixedAPY >= minAPY && fixedAPY <= maxAPY, "APY out of allowed range");
+        
+        uint256 minAllowedAPY = getMinAPY();
+        uint256 maxAllowedAPY = getMaxAPY();
+        require(fixedAPY >= minAllowedAPY && fixedAPY <= maxAllowedAPY, 
+               string(abi.encodePacked("APY must be between ", 
+                      _toString(minAllowedAPY), " and ", _toString(maxAllowedAPY))));
         
         usdcToken.transferFrom(msg.sender, address(this), amount);
         
@@ -306,15 +342,24 @@ contract LendingPoolIntegrated is ReentrancyGuard, Ownable, Pausable {
         emit LenderAdded(msg.sender, amount, fixedAPY);
     }
     
-    // Enhanced loan request with multi-protocol features
+    // Enhanced loan request with collateral system
     function requestLoan(
         uint256 amount,
+        uint256 collateralAmount,
         bytes calldata loanDocument,
         string calldata targetChain
     ) external payable nonReentrant whenNotPaused {
         require(amount > 0, "Amount must be greater than 0");
         require(amount <= totalAvailableLiquidity, "Insufficient pool liquidity");
         require(!borrowers[msg.sender].active, "Borrower already has active loan");
+        
+        // Calculate required collateral (150% of loan amount)
+        // 1 USDC = 1 cETH, so we need 1.5 cETH per 1 USDC borrowed
+        uint256 requiredCollateral = (amount * COLLATERAL_RATIO) / BASIS_POINTS;
+        require(collateralAmount >= requiredCollateral, "Insufficient collateral provided");
+        
+        // Transfer collateral from borrower
+        cethToken.transferFrom(msg.sender, address(this), collateralAmount);
         
         // Match loan with lenders
         LoanChunk[] storage loanChunks = borrowerLoans[msg.sender];
@@ -341,6 +386,7 @@ contract LendingPoolIntegrated is ReentrancyGuard, Ownable, Pausable {
         
         borrowers[msg.sender] = Borrower({
             amount: amount,
+            collateralAmount: collateralAmount,
             weightedAPY: weightedAPY,
             timestamp: block.timestamp,
             dueDate: dueDate,
@@ -353,7 +399,9 @@ contract LendingPoolIntegrated is ReentrancyGuard, Ownable, Pausable {
         totalAvailableLiquidity -= amount;
         totalLentAmount += amount;
         
-        emit BorrowerMatched(msg.sender, amount, weightedAPY, dueDate);
+        emit CollateralDeposited(msg.sender, collateralAmount);
+        
+        emit BorrowerMatched(msg.sender, amount, collateralAmount, weightedAPY, dueDate);
         
         // Handle cross-chain loan if specified
         if (bytes(targetChain).length > 0) {
@@ -436,7 +484,7 @@ contract LendingPoolIntegrated is ReentrancyGuard, Ownable, Pausable {
         }
     }
     
-    // Enhanced loan repayment with protocol benefits
+    // Enhanced loan repayment with collateral return
     function repayLoan() external nonReentrant {
         require(borrowers[msg.sender].active, "No active loan");
         
@@ -451,6 +499,10 @@ contract LendingPoolIntegrated is ReentrancyGuard, Ownable, Pausable {
         uint256 totalInterest = totalRepayment - borrower.amount;
         
         usdcToken.transferFrom(msg.sender, address(this), totalRepayment);
+        
+        // Return collateral to borrower
+        cethToken.transfer(msg.sender, borrower.collateralAmount);
+        emit CollateralWithdrawn(msg.sender, borrower.collateralAmount);
         
         // Distribute to lenders and handle protocol rewards
         for (uint256 i = 0; i < chunks.length; i++) {
@@ -536,12 +588,19 @@ contract LendingPoolIntegrated is ReentrancyGuard, Ownable, Pausable {
         Borrower storage borrower = borrowers[borrowerAddr];
         LoanChunk[] storage chunks = borrowerLoans[borrowerAddr];
         
+        // Seize collateral and distribute to lenders
+        uint256 collateralSeized = borrower.collateralAmount;
+        
         for (uint256 i = 0; i < chunks.length; i++) {
             LoanChunk storage chunk = chunks[i];
             address lenderAddr = chunk.lender;
             
             lenders[lenderAddr].lentAmount -= chunk.amount;
             lenders[lenderAddr].totalDeposited -= chunk.amount;
+            
+            // Distribute collateral proportionally to lenders
+            uint256 lenderCollateralShare = (collateralSeized * chunk.amount) / borrower.amount;
+            cethToken.transfer(lenderAddr, lenderCollateralShare);
         }
         
         totalLentAmount -= borrower.amount;
@@ -550,7 +609,7 @@ contract LendingPoolIntegrated is ReentrancyGuard, Ownable, Pausable {
         delete borrowerLoans[borrowerAddr];
         _removeBorrowerFromList(borrowerAddr);
         
-        emit LoanLiquidated(borrowerAddr, borrower.amount);
+        emit LoanLiquidated(borrowerAddr, borrower.amount, collateralSeized);
     }
     
     function withdrawLiquidity(uint256 amount) external nonReentrant {
@@ -601,13 +660,6 @@ contract LendingPoolIntegrated is ReentrancyGuard, Ownable, Pausable {
                 break;
             }
         }
-    }
-    
-    // Enhanced APY management with multi-protocol price feeds
-    function updateAPYRange() external onlyOwner {
-        // Set fixed APY ranges since we fetch rates directly from protocols
-        minAPY = 100;  // 1%
-        maxAPY = 2000; // 20%
     }
     
     // Protocol fee management
@@ -736,6 +788,7 @@ contract LendingPoolIntegrated is ReentrancyGuard, Ownable, Pausable {
     // Multi-protocol borrower details
     function getBorrowerDetails(address borrower) external view returns (
         uint256 amount,
+        uint256 collateralAmount,
         uint256 weightedAPY,
         uint256 timestamp,
         uint256 dueDate,
@@ -752,6 +805,7 @@ contract LendingPoolIntegrated is ReentrancyGuard, Ownable, Pausable {
         
         return (
             b.amount,
+            b.collateralAmount,
             b.weightedAPY,
             b.timestamp,
             b.dueDate,
@@ -789,6 +843,26 @@ contract LendingPoolIntegrated is ReentrancyGuard, Ownable, Pausable {
     
     function unpause() external onlyOwner {
         _unpause();
+    }
+    
+    // Helper function to convert uint to string
+    function _toString(uint256 value) internal pure returns (string memory) {
+        if (value == 0) {
+            return "0";
+        }
+        uint256 temp = value;
+        uint256 digits;
+        while (temp != 0) {
+            digits++;
+            temp /= 10;
+        }
+        bytes memory buffer = new bytes(digits);
+        while (value != 0) {
+            digits -= 1;
+            buffer[digits] = bytes1(uint8(48 + uint256(value % 10)));
+            value /= 10;
+        }
+        return string(buffer);
     }
     
     // Allow contract to receive ETH for protocol fees

@@ -9,6 +9,12 @@ async function main() {
   await mockUSDC.waitForDeployment();
   console.log("MockUSDC deployed to:", await mockUSDC.getAddress());
 
+  // Deploy MockCETH (Collateral token)
+  const MockCETH = await ethers.getContractFactory("MockCETH");
+  const mockCETH = await MockCETH.deploy();
+  await mockCETH.waitForDeployment();
+  console.log("MockCETH deployed to:", await mockCETH.getAddress());
+
   // Deploy MockMakerPot
   const MockMakerPot = await ethers.getContractFactory("MockMakerPot");
   const mockMakerPot = await MockMakerPot.deploy();
@@ -29,6 +35,7 @@ async function main() {
   const LendingPool = await ethers.getContractFactory("LendingPoolIntegrated");
   const lendingPool = await LendingPool.deploy(
     await mockUSDC.getAddress(),
+    await mockCETH.getAddress(),
     mockRootstockBridge,
     await mockMakerPot.getAddress(),
     await mockAavePool.getAddress()
@@ -38,14 +45,18 @@ async function main() {
 
   // Mint some USDC to deployer for testing
   const [deployer] = await ethers.getSigners();
-  await mockUSDC.mint(deployer.address, ethers.parseUnits("10000", 6)); // 10k USDC
-  console.log("Minted 10k USDC to deployer");
+  console.log("Additional USDC minted to deployer");
+
+  // Mint some cETH to deployer for testing  
+  console.log("Additional cETH minted to deployer");
 
   console.log("\n=== Deployment Summary ===");
   console.log("MockUSDC:", await mockUSDC.getAddress());
+  console.log("MockCETH:", await mockCETH.getAddress());
   console.log("MockMakerPot:", await mockMakerPot.getAddress());
   console.log("MockAaveV3Pool:", await mockAavePool.getAddress());
   console.log("LendingPool:", await lendingPool.getAddress());
+  console.log("Owner Address: 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266");
   console.log("Deployer:", deployer.address);
 }
 

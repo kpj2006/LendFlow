@@ -2,8 +2,9 @@
 pragma solidity ^0.8.19;
 
 contract MockMakerPot {
-    // Hardcoded DSR representing ~5% APY in ray format (1e27)
-    uint256 public constant dsr = 1000000001547125957863212448; // ~5% APY
+    // Hardcoded DSR representing 5% APY directly in ray format (1e27)
+    // 5% = 0.05 * 1e27 = 50000000000000000000000000
+    uint256 public constant dsr = 50000000000000000000000000; // 5% APY annualized
     uint256 public chi = 1000000000000000000000000000; // 1.0 in ray
     uint256 public rho = block.timestamp;
 

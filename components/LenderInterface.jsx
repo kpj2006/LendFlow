@@ -42,6 +42,46 @@ export default function LenderInterface() {
     watch: true
   })
 
+  // Get stable APY
+  const { data: stableAPY } = useContractRead({
+    address: LENDING_POOL_ADDRESS,
+    abi: LENDING_POOL_ABI,
+    functionName: 'getStableAPY',
+    watch: true
+  })
+
+  // Get dynamic APY bounds (stableAPY ± 0.2%)
+  const { data: minAPY } = useContractRead({
+    address: LENDING_POOL_ADDRESS,
+    abi: LENDING_POOL_ABI,
+    functionName: 'getMinAPY',
+    watch: true
+  })
+
+  const { data: maxAPY } = useContractRead({
+    address: LENDING_POOL_ADDRESS,
+    abi: LENDING_POOL_ABI,
+    functionName: 'getMaxAPY',
+    watch: true
+  })
+
+  // Contract write for updating stable APY
+  const { data: updateAPYData, write: updateStableAPY } = useContractWrite({
+    address: LENDING_POOL_ADDRESS,
+    abi: LENDING_POOL_ABI,
+    functionName: 'updateStableAPY'
+  })
+
+  // Remove USDC faucet - USDC is the main currency and should be obtained through proper means
+
+  // Initialize stable APY if it's zero
+  useEffect(() => {
+    if (stableAPY === 0n && updateStableAPY && address) {
+      console.log('Initializing stable APY...')
+      updateStableAPY()
+    }
+  }, [stableAPY, updateStableAPY, address])
+
   // Load Walrus metadata on component mount
   useEffect(() => {
     const loadWalrusData = async () => {
@@ -125,6 +165,13 @@ export default function LenderInterface() {
     return `${percentage.toFixed(2)}%`
   }
 
+  const formatBasisPoints = (basisPoints) => {
+    if (!basisPoints) return '0.00%'
+    // Convert from basis points to percentage
+    const percentage = Number(basisPoints) / 100
+    return `${percentage.toFixed(2)}%`
+  }
+
   const formatUSDC = (amount) => {
     if (!amount) return '0.00'
     return formatUnits(amount, 6)
@@ -157,9 +204,16 @@ export default function LenderInterface() {
               className="input-field"
               placeholder="Enter amount"
             />
-            <p className="text-sm text-gray-500 mt-1">
-              Balance: {formatUSDC(usdcBalance)} USDC
-            </p>
+            <div className="mt-1">
+              <p className="text-sm text-gray-500">
+                Balance: {formatUSDC(usdcBalance)} MockUSDC
+              </p>
+              {(!usdcBalance || Number(usdcBalance) === 0) && (
+                <p className="text-xs text-orange-600 mt-1">
+                  💡 No USDC found. On testnet, get USDC from the faucet or bridge from mainnet.
+                </p>
+              )}
+            </div>
           </div>
 
           <div>
@@ -169,14 +223,58 @@ export default function LenderInterface() {
             <input
               type="number"
               step="0.01"
+              min={minAPY ? (Number(minAPY) / 100).toFixed(2) : '0'}
+              max={maxAPY ? (Number(maxAPY) / 100).toFixed(2) : '50'}
               value={apy}
               onChange={(e) => setApy(e.target.value)}
-              className="input-field"
+              className={`input-field ${
+                apy && minAPY && maxAPY && 
+                (parseFloat(apy) * 100 < Number(minAPY) || parseFloat(apy) * 100 > Number(maxAPY)) 
+                  ? 'border-red-500' : ''
+              }`}
               placeholder="Enter APY"
             />
-            <p className="text-sm text-gray-500 mt-1">
-              Stable APY Reference: {formatAPY(stableAPY)}
-            </p>
+            <div className="text-sm mt-1 space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="text-gray-500">Stable APY Reference:</span>
+                <span className="font-medium text-gray-700">
+                  {stableAPY && stableAPY > 0 ? formatAPY(stableAPY) : 
+                   <span className="text-orange-500">Initializing...</span>}
+                </span>
+              </div>
+              
+              {stableAPY && stableAPY > 0 && (
+                <div className="text-xs text-gray-400 bg-gray-50 p-2 rounded">
+                  <div className="flex justify-between">
+                    <span>📊 70% MakerDAO (DSR):</span>
+                    <span>5.00%</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>📊 30% Aave v3:</span>
+                    <span>3.50%</span>
+                  </div>
+                  <hr className="my-1"/>
+                  <div className="flex justify-between font-medium">
+                    <span>📈 Weighted Average:</span>
+                    <span>{formatAPY(stableAPY)}</span>
+                  </div>
+                </div>
+              )}
+              
+              {minAPY && maxAPY && stableAPY > 0 && (
+                <p className="text-blue-600">
+                  <span className="font-medium">Allowed Range:</span> {formatBasisPoints(minAPY)} - {formatBasisPoints(maxAPY)} 
+                  <span className="text-xs text-gray-500 ml-1">(±0.2%)</span>
+                </p>
+              )}
+              
+              {apy && minAPY && maxAPY && 
+               (parseFloat(apy) * 100 < Number(minAPY) || parseFloat(apy) * 100 > Number(maxAPY)) && (
+                <p className="text-red-500 font-medium">
+                  ⚠️ APY must be between {formatBasisPoints(minAPY)} and {formatBasisPoints(maxAPY)}
+                </p>
+              )}
+            </div>
           </div>
 
           {/* Bitcoin Collateral Option */}
@@ -211,10 +309,19 @@ export default function LenderInterface() {
 
           <button
             onClick={handleAddLiquidity}
-            disabled={isLoading || !amount || !apy}
+            disabled={
+              isLoading || !amount || !apy || 
+              (minAPY && maxAPY && (parseFloat(apy) * 100 < Number(minAPY) || parseFloat(apy) * 100 > Number(maxAPY))) ||
+              !usdcBalance || Number(usdcBalance) === 0 ||
+              parseFloat(amount || '0') > parseFloat(formatUSDC(usdcBalance) || '0')
+            }
             className="btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isLoading ? 'Processing...' : 'Add Liquidity'}
+            {isLoading ? 'Processing...' : 
+             !usdcBalance || Number(usdcBalance) === 0 ? 'Need USDC Balance' :
+             parseFloat(amount || '0') > parseFloat(formatUSDC(usdcBalance) || '0') ? 'Insufficient USDC Balance' :
+             (minAPY && maxAPY && (parseFloat(apy) * 100 < Number(minAPY) || parseFloat(apy) * 100 > Number(maxAPY))) ? 'APY Out of Range' :
+             'Add Liquidity'}
           </button>
         </div>
       </div>

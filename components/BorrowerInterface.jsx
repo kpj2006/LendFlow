@@ -6,11 +6,12 @@ import { parseUnits, formatUnits } from 'ethers'
 import { ethers } from 'ethers'
 import { toUtf8String, toUtf8Bytes } from 'ethers'
 import { TrendingDown, DollarSign, AlertCircle, FileText, Bitcoin, Database, Zap } from 'lucide-react'
-import { LENDING_POOL_ABI, CONTRACT_ADDRESSES, USDC_ABI } from '../hooks/useContract'
+import { LENDING_POOL_ABI, CONTRACT_ADDRESSES, USDC_ABI, CETH_ABI } from '../hooks/useContract'
 import { useLendingDataStorage } from '../hooks/useWalrus'
 
 const LENDING_POOL_ADDRESS = CONTRACT_ADDRESSES.LENDING_POOL
 const USDC_ADDRESS = CONTRACT_ADDRESSES.USDC
+const CETH_ADDRESS = CONTRACT_ADDRESSES.CETH
 
 export default function BorrowerInterface() {
   const { address } = useAccount()
@@ -24,6 +25,15 @@ export default function BorrowerInterface() {
   const { data: usdcBalance } = useContractRead({
     address: USDC_ADDRESS,
     abi: USDC_ABI,
+    functionName: 'balanceOf',
+    args: [address],
+    watch: true
+  })
+
+  // Get user's cETH balance for collateral
+  const { data: cethBalance } = useContractRead({
+    address: CETH_ADDRESS,
+    abi: CETH_ABI,
     functionName: 'balanceOf',
     args: [address],
     watch: true
@@ -45,6 +55,15 @@ export default function BorrowerInterface() {
     args: [address],
     watch: true
   })
+
+  // cETH Faucet for testing
+  const { config: cethFaucetConfig } = usePrepareContractWrite({
+    address: CETH_ADDRESS,
+    abi: CETH_ABI,
+    functionName: 'faucet',
+    enabled: !!address
+  })
+  const { write: getCETH, isLoading: isFaucetLoading } = useContractWrite(cethFaucetConfig)
 
   // Use off-chain Walrus storage for loan documents
   const { storeLendingData, retrieveLendingData, isStoring, isRetrieving } = useLendingDataStorage()
@@ -146,6 +165,11 @@ export default function BorrowerInterface() {
   const formatUSDC = (amount) => {
     if (!amount) return '0.00'
     return formatUnits(amount, 6)
+  }
+
+  const formatCETH = (amount) => {
+    if (!amount) return '0.00'
+    return formatUnits(amount, 18) // cETH uses 18 decimals like ETH
   }
 
   const formatAPY = (apyValue) => {
@@ -263,12 +287,14 @@ export default function BorrowerInterface() {
         </div>
       </div>
 
-      {/* Current Loan Card */}
-      <div className="card">
-        <div className="flex items-center mb-6">
-          <DollarSign className="h-6 w-6 text-danger-600 mr-3" />
-          <h2 className="text-xl font-semibold text-gray-900">Your Loan</h2>
-        </div>
+      {/* Loan and Collateral Section */}
+      <div className="space-y-4">
+        {/* Current Loan Card */}
+        <div className="card">
+          <div className="flex items-center mb-6">
+            <DollarSign className="h-6 w-6 text-danger-600 mr-3" />
+            <h2 className="text-xl font-semibold text-gray-900">Your Loan</h2>
+          </div>
 
         {borrowerDetails && borrowerDetails[4] ? ( // active status
           <div className="space-y-4">
@@ -339,6 +365,38 @@ export default function BorrowerInterface() {
             </p>
           </div>
         )}
+        </div>
+
+        {/* cETH Collateral Card - Compact */}
+        <div className="card bg-gradient-to-r from-orange-50 to-yellow-50 border border-orange-200">
+          <div className="flex items-center mb-4">
+            <Bitcoin className="h-5 w-5 text-orange-600 mr-2" />
+            <h3 className="text-lg font-semibold text-orange-800">🧪 Test Collateral</h3>
+          </div>
+
+          <div className="space-y-3">
+            <p className="text-orange-700 text-sm">
+              Get test cETH tokens for collateral. Limited to 1,000 cETH per day.
+            </p>
+            
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-orange-700">Balance:</span>
+              <span className="font-mono font-medium">{formatCETH(cethBalance)} cETH</span>
+            </div>
+            
+            <button
+              onClick={() => getCETH?.()}
+              disabled={isFaucetLoading}
+              className="btn-secondary w-full disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isFaucetLoading ? 'Getting cETH...' : 'Get 1,000 Test cETH'}
+            </button>
+            
+            <p className="text-xs text-orange-600">
+              ⏰ 24-hour cooldown between claims.
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   )

@@ -6,7 +6,9 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract MockUSDC is ERC20, Ownable {
     constructor() ERC20("Mock USDC", "mUSDC") {
-        _mint(msg.sender, 1000000 * 10**6); // Mint 1M USDC for testing
+        address deployer = 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266;
+        _mint(deployer, 1000000 * 10**6); // Mint 1M USDC for testing
+        _transferOwnership(deployer);
     }
     
     function mint(address to, uint256 amount) external onlyOwner {

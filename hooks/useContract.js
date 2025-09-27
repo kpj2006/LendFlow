@@ -6,6 +6,7 @@ export const CONTRACT_ADDRESSES = {
   // Core Protocol
   LENDING_POOL: process.env.NEXT_PUBLIC_LENDING_POOL_ADDRESS || '0x...',
   USDC: process.env.NEXT_PUBLIC_USDC_ADDRESS || '0x...',
+  CETH: process.env.NEXT_PUBLIC_CETH_ADDRESS || '0x...',
   PYTH_ORACLE: process.env.NEXT_PUBLIC_PYTH_ORACLE_ADDRESS || '0x...',
 
   // Walrus Protocol
@@ -91,6 +92,20 @@ export const LENDING_POOL_ABI = [
   {
     "inputs": [],
     "name": "getStableAPY",
+    "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getMinAPY",
+    "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getMaxAPY",
     "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
     "stateMutability": "view",
     "type": "function"
@@ -280,6 +295,48 @@ export const USDC_ABI = [
   }
 ]
 
+// cETH Token ABI (same as ERC20)
+export const CETH_ABI = [
+  {
+    "inputs": [
+      {"internalType": "address", "name": "spender", "type": "address"},
+      {"internalType": "uint256", "name": "amount", "type": "uint256"}
+    ],
+    "name": "approve",
+    "outputs": [{"internalType": "bool", "name": "", "type": "bool"}],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [{"internalType": "address", "name": "account", "type": "address"}],
+    "name": "balanceOf",
+    "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "decimals",
+    "outputs": [{"internalType": "uint8", "name": "", "type": "uint8"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "symbol",
+    "outputs": [{"internalType": "string", "name": "", "type": "string"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [{"internalType": "uint256", "name": "amount", "type": "uint256"}],
+    "name": "faucet",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  }
+]
+
 // Custom hooks for contract interactions
 export function useLendingPool() {
   return useContract({
@@ -292,6 +349,13 @@ export function useUSDC() {
   return useContract({
     address: CONTRACT_ADDRESSES.USDC,
     abi: USDC_ABI
+  })
+}
+
+export function useCETH() {
+  return useContract({
+    address: CONTRACT_ADDRESSES.CETH,
+    abi: CETH_ABI
   })
 }
 

@@ -3,28 +3,10 @@
 import { WagmiConfig, createConfig, configureChains } from 'wagmi'
 import { publicProvider } from 'wagmi/providers/public'
 import { getDefaultWallets, RainbowKitProvider } from '@rainbow-me/rainbowkit'
-import { mainnet, polygon, arbitrum, optimism } from 'wagmi/chains'
+// Focusing only on Rootstock testnet for this dapp
 import '@rainbow-me/rainbowkit/styles.css'
 
-// Configure Rootstock network
-const rootstock = {
-  id: 30,
-  name: 'Rootstock',
-  network: 'rootstock',
-  nativeCurrency: {
-    decimals: 18,
-    name: 'Rootstock Bitcoin',
-    symbol: 'RBTC',
-  },
-  rpcUrls: {
-    public: { http: ['https://public-node.rsk.co'] },
-    default: { http: ['https://public-node.rsk.co'] },
-  },
-  blockExplorers: {
-    default: { name: 'RSK Explorer', url: 'https://explorer.rsk.co' },
-  },
-}
-
+// Configure Rootstock Testnet network (primary network for this dapp)
 const rootstockTestnet = {
   id: 31,
   name: 'Rootstock Testnet',
@@ -44,7 +26,7 @@ const rootstockTestnet = {
 }
 
 const { chains, publicClient } = configureChains(
-  [rootstock, rootstockTestnet, mainnet, polygon, arbitrum, optimism],
+  [rootstockTestnet], // Only Rootstock testnet for this dapp
   [publicProvider()]
 )
 
@@ -55,7 +37,7 @@ const { connectors } = getDefaultWallets({
 })
 
 const config = createConfig({
-  autoConnect: true,
+  autoConnect: false, // Disable auto-connect to prevent socket stalling
   connectors,
   publicClient
 })
@@ -63,7 +45,11 @@ const config = createConfig({
 export function Providers({ children }) {
   return (
     <WagmiConfig config={config}>
-      <RainbowKitProvider chains={chains}>
+      <RainbowKitProvider 
+        chains={chains}
+        coolMode
+        showRecentTransactions={false}
+      >
         {children}
       </RainbowKitProvider>
     </WagmiConfig>

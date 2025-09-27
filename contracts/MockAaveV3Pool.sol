@@ -11,10 +11,6 @@ contract MockAaveV3Pool {
     // 0.035 * 1e27 / 31536000 ≈ 3.5e25
     uint256 public constant USDC_LIQUIDITY_RATE = 35000000000000000000000000; // 3.5% APY
 
-    // Alternative APY values for testing different scenarios:
-    // uint256 public constant USDC_LIQUIDITY_RATE = 20000000000000000000000000; // 2.0% APY
-    // uint256 public constant USDC_LIQUIDITY_RATE = 50000000000000000000000000; // 5.0% APY
-
     function getReserveData(address asset) external view returns (
         uint256 configuration,
         uint128 liquidityIndex,
