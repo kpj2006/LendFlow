@@ -45,9 +45,31 @@ const rootstockTestnet = {
   },
 }
 
+// Add Ethereum Mainnet for broader compatibility
+const ethereum = {
+  id: 1,
+  name: 'Ethereum',
+  network: 'homestead',
+  nativeCurrency: {
+    decimals: 18,
+    name: 'Ether',
+    symbol: 'ETH',
+  },
+  rpcUrls: {
+    public: { http: ['https://cloudflare-eth.com'] },
+    default: { http: ['https://cloudflare-eth.com'] },
+  },
+  blockExplorers: {
+    default: { name: 'Etherscan', url: 'https://etherscan.io' },
+  },
+}
+
 // Use localhost for development, Rootstock testnet for production
 const isDevelopment = process.env.NEXT_PUBLIC_NETWORK === 'localhost'
-const activeChains = isDevelopment ? [localhost] : [rootstockTestnet]
+// Allow multiple networks - users can connect from any supported network
+const activeChains = isDevelopment 
+  ? [localhost, rootstockTestnet, ethereum] 
+  : [rootstockTestnet, ethereum, localhost]
 
 const { chains, publicClient } = configureChains(
   activeChains,
@@ -65,7 +87,12 @@ const { chains, publicClient } = configureChains(
         return {
           http: ['http://127.0.0.1:8545']
         }
+      } else if (chain.id === 1) {
+        return {
+          http: ['https://cloudflare-eth.com']
+        }
       }
+      // Allow other chains to use their default configuration
       return null
     }
   })]
@@ -102,6 +129,7 @@ export function Providers({ children }) {
           chains={chains}
           coolMode={!isDevelopment} // Disable cool mode in development
           showRecentTransactions={false}
+          initialChain={undefined} // Don't force any specific initial chain
         >
           {children}
         </RainbowKitProvider>
