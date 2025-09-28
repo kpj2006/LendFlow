@@ -2,7 +2,8 @@
 
 import { WagmiConfig, createConfig, configureChains } from 'wagmi'
 import { publicProvider } from 'wagmi/providers/public'
-import { getDefaultWallets, RainbowKitProvider } from '@rainbow-me/rainbowkit'
+import { getDefaultWallets, RainbowKitProvider, connectorsForWallets } from '@rainbow-me/rainbowkit'
+import { injectedWallet, metaMaskWallet } from '@rainbow-me/rainbowkit/wallets'
 import ErrorBoundary from '../components/ErrorBoundary'
 // Focusing only on Rootstock testnet for this dapp
 import '@rainbow-me/rainbowkit/styles.css'
@@ -70,11 +71,22 @@ const { chains, publicClient } = configureChains(
   })]
 )
 
-const { connectors } = getDefaultWallets({
-  appName: 'Lending Protocol',
-  projectId: process.env.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID || 'demo-project-id-for-development',
-  chains
-})
+// Configure wallets - use simpler setup in development to avoid WalletConnect issues
+const connectors = isDevelopment 
+  ? connectorsForWallets([
+      {
+        groupName: 'Popular',
+        wallets: [
+          injectedWallet({ chains }),
+          metaMaskWallet({ chains, projectId: 'dev-mode' })
+        ]
+      }
+    ])
+  : getDefaultWallets({
+      appName: 'Lending Protocol',
+      projectId: process.env.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID || 'demo-project-id-for-development',
+      chains
+    }).connectors
 
 const config = createConfig({
   autoConnect: false, // Disable auto-connect to prevent socket stalling
