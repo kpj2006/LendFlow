@@ -3,6 +3,7 @@
 import { WagmiConfig, createConfig, configureChains } from 'wagmi'
 import { publicProvider } from 'wagmi/providers/public'
 import { getDefaultWallets, RainbowKitProvider } from '@rainbow-me/rainbowkit'
+import ErrorBoundary from '../components/ErrorBoundary'
 // Focusing only on Rootstock testnet for this dapp
 import '@rainbow-me/rainbowkit/styles.css'
 
@@ -83,14 +84,16 @@ const config = createConfig({
 
 export function Providers({ children }) {
   return (
-    <WagmiConfig config={config}>
-      <RainbowKitProvider 
-        chains={chains}
-        coolMode
-        showRecentTransactions={false}
-      >
-        {children}
-      </RainbowKitProvider>
-    </WagmiConfig>
+    <ErrorBoundary>
+      <WagmiConfig config={config}>
+        <RainbowKitProvider 
+          chains={chains}
+          coolMode={!isDevelopment} // Disable cool mode in development
+          showRecentTransactions={false}
+        >
+          {children}
+        </RainbowKitProvider>
+      </WagmiConfig>
+    </ErrorBoundary>
   )
 }

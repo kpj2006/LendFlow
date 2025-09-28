@@ -10,6 +10,11 @@ export const metadata = {
   description: 'Gamified decentralized lending protocol with orderbook matching - Enter the DeFi Matrix',
   keywords: 'DeFi, Lending, Gaming, Cryptocurrency, Blockchain, CyberPunk',
   authors: [{ name: 'CyberLend Team' }],
+}
+
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
   themeColor: '#06b6d4',
 }
 

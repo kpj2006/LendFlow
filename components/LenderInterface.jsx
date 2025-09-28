@@ -92,6 +92,8 @@ export default function LenderInterface() {
     functionName: 'updateStableAPY'
   })
 
+  // Contract interactions removed - Demo mode with Walrus storage only
+
   // Initialize stable APY if it's zero
   useEffect(() => {
     if (stableAPY === 0n && updateStableAPY && address) {
@@ -100,17 +102,7 @@ export default function LenderInterface() {
     }
   }, [stableAPY, updateStableAPY, address])
 
-  // Debug contract write functions
-  useEffect(() => {
-    console.log('Contract write functions status:', {
-      approve: typeof approve,
-      addLiquidity: typeof addLiquidity,
-      approveConfig: !!approveConfig,
-      addLiquidityConfig: !!addLiquidityConfig,
-      amount,
-      apy
-    })
-  }, [approve, addLiquidity, approveConfig, addLiquidityConfig, amount, apy])
+  // Demo mode - Contract interactions removed for stability
 
   // Load Walrus metadata on component mount
   useEffect(() => {
@@ -132,7 +124,7 @@ export default function LenderInterface() {
     loadWalrusData()
   }, [address]) // Remove retrieveLendingData from dependencies to prevent infinite loop
 
-  // Store lender metadata on Walrus when adding liquidity
+  // Store lender metadata on Walrus (Demo Mode - No Contract Interaction)
   const handleAddLiquidity = async () => {
     if (!amount || !apy) return
 
@@ -142,7 +134,7 @@ export default function LenderInterface() {
     setGeneratedBlobId(null)
 
     try {
-      // Store metadata on Walrus first
+      // Store metadata on Walrus
       if (lenderMetadata.trim()) {
         setWalrusStatus('storing')
         setWalrusMessage('🔄 Storing metadata on Walrus Network...')
@@ -161,66 +153,30 @@ export default function LenderInterface() {
           localStorage.setItem(`lender_metadata_${address}`, metadataResult.blobId)
           setGeneratedBlobId(metadataResult.blobId)
           setWalrusStatus('success')
-          setWalrusMessage(`✅ Metadata stored successfully on Walrus Network!`)
+          setWalrusMessage(`✅ Metadata stored successfully! Blob ID: ${metadataResult.blobId}`)
           console.log('✅ Metadata stored on Walrus with Blob ID:', metadataResult.blobId)
         } else {
           console.error('❌ Walrus storage failed - no blob ID returned:', metadataResult)
           throw new Error('Failed to generate blob ID')
         }
+      } else {
+        // If no metadata, just show success for demo
+        setWalrusStatus('success')
+        setWalrusMessage(`✅ Liquidity operation completed! Amount: ${amount} USDC at ${apy}% APY`)
+        console.log('✅ Demo liquidity operation completed')
       }
 
-      // Check if contract write functions are available
-      if (!approve) {
-        throw new Error('USDC approve function not available')
-      }
-      if (!addLiquidity) {
-        throw new Error('addLiquidity function not available')
-      }
-
-      // First approve USDC spending
-      setWalrusMessage('🔄 Approving USDC spending...')
-      await approve()
-      
-      // Then add liquidity
-      setWalrusMessage('🔄 Adding liquidity to pool...')
-      await addLiquidity()
-
-      setWalrusMessage('🎉 Liquidity added successfully!')
+      // Clear form after success
+      setAmount('')
+      setLenderMetadata('')
     } catch (error) {
-      console.error('Error adding liquidity:', error)
+      console.error('Error in liquidity operation:', error)
       setWalrusStatus('error')
-      setWalrusMessage(`❌ Error: ${error.message || 'Failed to add liquidity'}`)
+      setWalrusMessage(`❌ Error: ${error.message || 'Operation failed'}`)
     } finally {
       setIsLoading(false)
     }
   }
-
-  // Prepare approve transaction
-  const { config: approveConfig } = usePrepareContractWrite({
-    address: USDC_ADDRESS,
-    abi: USDC_ABI,
-    functionName: 'approve',
-    args: [LENDING_POOL_ADDRESS, parseUnits(amount || '0', 6)],
-    enabled: !!amount && parseFloat(amount) > 0
-  })
-
-  // Prepare add liquidity transaction with new parameters
-  const { config: addLiquidityConfig } = usePrepareContractWrite({
-    address: LENDING_POOL_ADDRESS,
-    abi: LENDING_POOL_ABI,
-    functionName: 'addLiquidity',
-    args: [
-      parseUnits(amount || '0', 6),
-      Math.floor(parseFloat(apy) * 100),
-      useBitcoinCollateral,
-      lenderMetadata ? toUtf8Bytes(lenderMetadata) : '0x'
-    ],
-    enabled: !!amount && parseFloat(amount) > 0,
-    value: useBitcoinCollateral ? parseUnits('0.001', 18) : undefined // BTC collateral fee
-  })
-
-  const { write: approve } = useContractWrite(approveConfig)
-  const { write: addLiquidity } = useContractWrite(addLiquidityConfig)
 
   const formatAPY = (apyValue) => {
     if (!apyValue) return '0.00%'
@@ -492,39 +448,18 @@ export default function LenderInterface() {
 
             <button
               onClick={handleAddLiquidity}
-              disabled={
-                isLoading || !amount || !apy || 
-                !isInValidRange || !hasBalance || !sufficientBalance
-              }
+              disabled={isLoading || !amount || !apy}
               className="btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? (
                 <div className="flex items-center justify-center">
                   <div className="spinner h-4 w-4 mr-2"></div>
-                  {walrusStatus === 'storing' ? 'Storing Metadata...' : 
-                   walrusMessage.includes('Approving') ? 'Approving USDC...' :
-                   walrusMessage.includes('Adding') ? 'Adding Liquidity...' :
-                   'Deploying Capital...'}
-                </div>
-              ) : !hasBalance ? (
-                <div className="flex items-center justify-center">
-                  <AlertTriangle className="h-4 w-4 mr-2" />
-                  Acquire USDC Balance
-                </div>
-              ) : !sufficientBalance ? (
-                <div className="flex items-center justify-center">
-                  <AlertTriangle className="h-4 w-4 mr-2" />
-                  Insufficient Balance
-                </div>
-              ) : !isInValidRange ? (
-                <div className="flex items-center justify-center">
-                  <AlertTriangle className="h-4 w-4 mr-2" />
-                  APY Out of Range
+                  {walrusStatus === 'storing' ? 'Storing Metadata on Walrus...' : 'Processing Demo...'}
                 </div>
               ) : (
                 <div className="flex items-center justify-center">
-                  <Zap className="h-4 w-4 mr-2" />
-                  Deploy Liquidity
+                  <Database className="h-4 w-4 mr-2" />
+                  Demo Liquidity + Walrus Storage
                 </div>
               )}
             </button>

@@ -72,13 +72,43 @@ export default function BorrowerInterface() {
   })
 
   // cETH Faucet for testing
-  const { config: cethFaucetConfig } = usePrepareContractWrite({
+  const { config: cethFaucetConfig, error: cethFaucetError } = usePrepareContractWrite({
     address: CETH_ADDRESS,
     abi: CETH_ABI,
     functionName: 'faucet',
     enabled: !!address
   })
-  const { write: getCETH, isLoading: isFaucetLoading } = useContractWrite(cethFaucetConfig)
+  
+  // Debug cETH faucet config
+  useEffect(() => {
+    console.log('cETH Faucet Debug:', {
+      address: CETH_ADDRESS,
+      userAddress: address,
+      config: !!cethFaucetConfig,
+      error: cethFaucetError?.message
+    })
+  }, [address, cethFaucetConfig, cethFaucetError])
+  
+  const { write: getCETH, isLoading: isFaucetLoading, error: cethWriteError } = useContractWrite(cethFaucetConfig)
+  
+  // Manual cETH faucet handler if wagmi fails
+  const handleGetCETH = async () => {
+    console.log('Attempting to get cETH...')
+    if (getCETH) {
+      console.log('Using wagmi getCETH function')
+      try {
+        await getCETH()
+      } catch (error) {
+        console.error('Wagmi cETH faucet error:', error)
+      }
+    } else {
+      console.error('getCETH function not available:', {
+        config: !!cethFaucetConfig,
+        configError: cethFaucetError?.message,
+        writeError: cethWriteError?.message
+      })
+    }
+  }
 
   // Use off-chain Walrus storage for loan documents
   const { storeLendingData, retrieveLendingData, isStoring, isRetrieving } = useLendingDataStorage()
@@ -473,20 +503,19 @@ export default function BorrowerInterface() {
                 <Bitcoin className="h-5 w-5 text-orange-400" />
               </div>
               <div>
-                <h3 className="text-lg font-orbitron font-semibold text-orange-400">🧪 Test Collateral Vault</h3>
-                <p className="text-orange-300/70 text-xs">Development environment only</p>
+                <h3 className="text-lg font-orbitron font-semibold text-orange-400">🧪 Faucet (for tester only)</h3>
               </div>
             </div>
 
             <div className="space-y-4">
-              <div className="p-3 bg-orange-900/20 rounded-lg border border-orange-500/20">
+              {/* <div className="p-3 bg-orange-900/20 rounded-lg border border-orange-500/20">
                 <p className="text-orange-200 text-sm mb-2">
                   🎯 Acquire test cETH tokens for collateral testing
                 </p>
                 <div className="text-xs text-orange-300/70">
                   🎉 No cooldown! Mint as many times as needed for testing
                 </div>
-              </div>
+              </div> */}
               
               <div className="stat-card bg-orange-900/10">
                 <div className="stat-card-label text-orange-400">Current Balance</div>
@@ -495,7 +524,7 @@ export default function BorrowerInterface() {
               </div>
               
               <button
-                onClick={() => getCETH?.()}
+                onClick={handleGetCETH}
                 disabled={isFaucetLoading}
                 className="btn-secondary w-full disabled:opacity-50"
               >

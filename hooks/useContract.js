@@ -329,7 +329,7 @@ export const CETH_ABI = [
     "type": "function"
   },
   {
-    "inputs": [{"internalType": "uint256", "name": "amount", "type": "uint256"}],
+    "inputs": [],
     "name": "faucet",
     "outputs": [],
     "stateMutability": "nonpayable",
