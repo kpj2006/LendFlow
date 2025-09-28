@@ -1,8 +1,8 @@
-# 🤝 Contributing to DeFi Lending Protocol
+# Contributing to DeFi Lending Protocol
 
 Thank you for your interest in contributing to our lending protocol! This document provides guidelines and information for contributors.
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 - Node.js 18+
@@ -30,7 +30,7 @@ npm run compile
 npm test
 ```
 
-## 📋 Contribution Guidelines
+## Contribution Guidelines
 
 ### Code Style
 - Follow existing code patterns
@@ -58,7 +58,7 @@ refactor: code refactoring
 7. Push to your branch (`git push origin feature/amazing-feature`)
 8. Open a Pull Request
 
-## 🧪 Testing
+## Testing
 
 ### Smart Contract Tests
 ```bash
@@ -81,7 +81,7 @@ npm run lint
 npm run type-check
 ```
 
-## 🐛 Reporting Issues
+## Reporting Issues
 
 ### Bug Reports
 When reporting bugs, please include:
@@ -98,7 +98,7 @@ For feature requests, please include:
 - Proposed implementation (if any)
 - Additional context
 
-## 📚 Documentation
+## Documentation
 
 ### Code Documentation
 - Document all public functions
@@ -112,7 +112,7 @@ For feature requests, please include:
 - Add example transactions
 - Update integration guides
 
-## 🔒 Security
+## Security
 
 ### Security Issues
 If you discover a security vulnerability, please:
@@ -128,7 +128,7 @@ If you discover a security vulnerability, please:
 - Write comprehensive tests
 - Review code thoroughly
 
-## 🎯 Areas for Contribution
+## Areas for Contribution
 
 ### High Priority
 - [ ] Additional test coverage
@@ -148,14 +148,14 @@ If you discover a security vulnerability, please:
 - [ ] Additional languages
 - [ ] Community features
 
-## 📞 Getting Help
+## Getting Help
 
 - **GitHub Discussions**: For questions and discussions
 - **Discord**: Real-time chat with the community
 - **Email**: team@your-domain.com
 - **Documentation**: Check the docs folder
 
-## 🏆 Recognition
+## Recognition
 
 Contributors will be recognized in:
 - README contributors section
@@ -163,10 +163,6 @@ Contributors will be recognized in:
 - Community highlights
 - Special acknowledgments
 
-## 📄 License
-
-By contributing, you agree that your contributions will be licensed under the MIT License.
-
 ---
 
-Thank you for contributing to the DeFi Lending Protocol! 🚀
+Thank you for contributing to the DeFi Lending Protocol! 

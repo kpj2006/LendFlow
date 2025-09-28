@@ -28,7 +28,7 @@ export default function Home() {
           <div className="text-xl font-orbitron text-cyan-400 uppercase tracking-wider">
             <span className="text-glow">Initializing Matrix...</span>
           </div>
-          <div className="mt-2 text-gray-400">Loading CyberLend Protocol</div>
+          <div className="mt-2 text-gray-400">Loading LendFlow Protocol</div>
         </div>
       </div>
     )
@@ -65,7 +65,7 @@ export default function Home() {
             {/* Gaming-style logo */}
             <div className="mb-8 relative">
               <h1 className="text-6xl md:text-8xl font-orbitron font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-blue-400 to-cyan-400 mb-4 text-glow">
-                CYBERLEND
+                LendFlow
               </h1>
               <div className="absolute -inset-4 bg-gradient-to-r from-cyan-600/20 to-blue-600/20 blur-xl rounded-full"></div>
             </div>
@@ -99,9 +99,7 @@ export default function Home() {
             </div>
           </div>
           
-          <div className="w-full max-w-2xl mb-12">
-            <NetworkValidator />
-          </div>
+
           
           <div className="relative">
             <div className="absolute -inset-4 bg-gradient-to-r from-cyan-600 to-blue-600 rounded-lg blur-lg opacity-30"></div>
@@ -112,7 +110,7 @@ export default function Home() {
           
           <div className="mt-8 text-center">
             <p className="text-gray-400 text-sm font-orbitron uppercase tracking-wider">
-              🚀 Join the Financial Revolution
+              Join the Financial Revolution
             </p>
           </div>
         </div>
@@ -133,10 +131,11 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-20">
             <div className="flex items-center space-x-4">
+              <NetworkValidator />
               <Terminal className="h-8 w-8 text-cyan-400" />
               <div>
                 <h1 className="text-2xl font-orbitron font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-400">
-                  CYBERLEND
+                  LendFlow
                 </h1>
                 <div className="text-xs text-gray-400 font-orbitron uppercase tracking-wider">
                   DeFi Protocol v2.0
@@ -149,7 +148,6 @@ export default function Home() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <NetworkValidator />
         
         {/* Gaming-style Navigation */}
         <div className="mb-12">
@@ -215,7 +213,7 @@ export default function Home() {
               <div className="h-px bg-gradient-to-r from-transparent via-cyan-400 to-transparent flex-1 max-w-32"></div>
             </div>
             <p className="text-gray-400 font-orbitron uppercase text-sm tracking-wider">
-              CyberLend Protocol - Powered by Blockchain Technology
+              LendFlow - Powered by Blockchain Technology
             </p>
             <p className="text-gray-500 text-xs mt-2">
               🛡️ Secured • 🚀 Decentralized • ⚡ Lightning Fast

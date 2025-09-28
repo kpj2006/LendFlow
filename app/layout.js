@@ -6,7 +6,7 @@ const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
 const orbitron = Orbitron({ subsets: ['latin'], variable: '--font-orbitron' })
 
 export const metadata = {
-  title: 'CyberLend Protocol - Next-Gen DeFi Gaming',
+  title: 'LendFlow',
   description: 'Gamified decentralized lending protocol with orderbook matching - Enter the DeFi Matrix',
   keywords: 'DeFi, Lending, Gaming, Cryptocurrency, Blockchain, CyberPunk',
   authors: [{ name: 'CyberLend Team' }],

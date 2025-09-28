@@ -1,33 +1,30 @@
-# 🏦 **DeFi Lending Protocol with Dynamic Orderbook Matching**
+# **DeFi Lending Protocol with Dynamic Orderbook Matching**
 
 <div align="center">
 
 ![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
-![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![Solidity](https://img.shields.io/badge/solidity-^0.8.19-orange.svg)
 ![Next.js](https://img.shields.io/badge/next.js-14.0.0-black.svg)
 ![Hardhat](https://img.shields.io/badge/hardhat-2.19.0-yellow.svg)
 
 **A revolutionary decentralized lending protocol that protects small borrowers from whale impact through intelligent orderbook matching and multi-protocol APY integration.**
 
-[🚀 Live Demo](https://your-demo-url.com) • [📖 Documentation](https://your-docs-url.com) • [🐛 Report Bug](https://github.com/your-repo/issues) • [💡 Request Feature](https://github.com/your-repo/issues)
-
 </div>
 
 ---
 
-## 🎯 **What We Built**
+## **What We Built**
 
 We've created a **next-generation DeFi lending protocol** that solves the critical problem of **whale impact on small borrowers** in decentralized lending markets. Our protocol uses **dynamic orderbook matching** to ensure fair pricing for all participants while integrating multiple DeFi protocols for optimal APY calculation.
 
-### **🔥 Key Innovation: Dynamic Borrower Classification**
+### **Key Innovation: Dynamic Borrower Classification**
 - **Small Borrowers** (< 1,000 USDC): Protected with **lowest APY matching**
 - **Whale Borrowers** (≥ 1,000 USDC): Premium service with **highest APY matching**
 - **Automatic Classification**: Based on loan size relative to pool liquidity
 
 ---
 
-## 🏗️ **Architecture Overview**
+## **Architecture Overview**
 
 ```mermaid
 graph TB
@@ -58,32 +55,32 @@ graph TB
 
 ---
 
-## ⚡ **Core Features**
+## **Core Features**
 
-### **🛡️ Small Borrower Protection**
+### **mall Borrower Protection**
 - **Lowest APY First**: Small borrowers get the best available rates
 - **Whale Impact Protection**: Large loans don't affect small borrower pricing
 - **Dynamic Threshold**: 5% of pool liquidity determines borrower classification
 
-### **🐋 Whale Borrower Premium**
+### **Whale Borrower Premium**
 - **Highest APY First**: Ensures large loans get filled quickly
 - **Weighted APY Calculation**: Fair pricing across multiple lenders
 - **Priority Matching**: Guaranteed loan fulfillment
 
-### **📊 Multi-Protocol APY Integration**
+### **Multi-Protocol APY Integration**
 - **MakerDAO DSR**: 5% APY (70% weight)
 - **Aave v3 Supply**: 3.5% APY (30% weight)
 - **Hybrid Rate**: 4.55% weighted average
 - **EWMA Smoothing**: Prevents sudden rate spikes
 
-### **🔗 Cross-Chain Capabilities**
+### **Cross-Chain Capabilities**
 - **Rootstock Bridge**: Bitcoin integration
 - **Walrus Storage**: Decentralized metadata storage
 - **Multi-Chain Loans**: Support for different target chains
 
 ---
 
-## 🚀 **Quick Start**
+## **Quick Start**
 
 ### **Prerequisites**
 - Node.js 18+
@@ -94,8 +91,8 @@ graph TB
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/lending-protocol.git
-cd lending-protocol
+git clone https://github.com/kpj2006/temp-e.git
+cd temp-e
 
 # Install dependencies
 npm install --legacy-peer-deps
@@ -128,7 +125,7 @@ npm run deploy
 
 ---
 
-## 🎮 **How It Works**
+## **How It Works**
 
 ### **For Lenders: Earn Interest on Your USDC**
 
@@ -149,7 +146,7 @@ npm run deploy
 
 ---
 
-## 📊 **Matching Algorithm Deep Dive**
+## **Matching Algorithm Deep Dive**
 
 ### **Small Borrower Flow (< 1,000 USDC)**
 ```
@@ -182,7 +179,7 @@ Whale Borrower wants 70 USDC:
 
 ---
 
-## 🔧 **Technical Stack**
+## **Technical Stack**
 
 ### **Smart Contracts**
 - **Solidity** ^0.8.19
@@ -206,7 +203,7 @@ Whale Borrower wants 70 USDC:
 
 ---
 
-## 🧪 **Testing & Security**
+## **Testing & Security**
 
 ### **Test Coverage**
 ```bash
@@ -220,16 +217,16 @@ npm test -- --grep "FrontendIntegration"
 ```
 
 ### **Security Features**
-- ✅ **Reentrancy Protection** using OpenZeppelin's ReentrancyGuard
-- ✅ **Access Control** with Ownable pattern
-- ✅ **Input Validation** for all parameters
-- ✅ **Overflow Protection** with SafeMath
-- ✅ **Pausable** for emergency stops
-- ✅ **150% Collateral Ratio** for over-collateralization
+- **Reentrancy Protection** using OpenZeppelin's ReentrancyGuard
+- **Access Control** with Ownable pattern
+- **Input Validation** for all parameters
+- **Overflow Protection** with SafeMath
+- **Pausable** for emergency stops
+- **150% Collateral Ratio** for over-collateralization
 
 ---
 
-## 📈 **Protocol Metrics**
+## **Protocol Metrics**
 
 ### **Real-Time Dashboard**
 - **Available Liquidity**: Total USDC ready to lend
@@ -247,7 +244,7 @@ npm test -- --grep "FrontendIntegration"
 
 ---
 
-## 🌐 **Network Support**
+## **Network Support**
 
 ### **Primary Network: Rootstock**
 - **Mainnet**: Chain ID 30
@@ -261,7 +258,7 @@ npm test -- --grep "FrontendIntegration"
 
 ---
 
-## 🎯 **Use Cases**
+## **Use Cases**
 
 ### **For Individual Users**
 - **Lenders**: Earn stable returns on USDC
@@ -275,27 +272,27 @@ npm test -- --grep "FrontendIntegration"
 
 ---
 
-## 🚀 **Roadmap**
+## **Roadmap**
 
-### **Phase 1: Core Protocol** ✅
+### **Phase 1: Core Protocol**
 - [x] Smart contract development
 - [x] Frontend interface
 - [x] Basic matching algorithm
 - [x] Testing and security audit
 
-### **Phase 2: Protocol Integration** ✅
+### **Phase 2: Protocol Integration**
 - [x] MakerDAO DSR integration
 - [x] Aave v3 integration
 - [x] Pyth Network price feeds
 - [x] Walrus storage integration
 
-### **Phase 3: Advanced Features** 🚧
+### **Phase 3: Advanced Features**
 - [ ] Multi-token support
 - [ ] Advanced order types
 - [ ] Liquidation mechanisms
 - [ ] Governance token
 
-### **Phase 4: Scale & Optimize** 📋
+### **Phase 4: Scale & Optimize**
 - [ ] Layer 2 deployment
 - [ ] Mobile app
 - [ ] API for developers
@@ -303,7 +300,7 @@ npm test -- --grep "FrontendIntegration"
 
 ---
 
-## 🤝 **Contributing**
+## **Contributing**
 
 We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details.
 
@@ -321,42 +318,24 @@ git checkout -b feature/amazing-feature
 ```
 
 ---
-
-## 📄 **License**
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
----
-
-## 🏆 **Hackathon Submission**
-
 ### **What Makes This Special**
-1. **🎯 Problem Solved**: Protects small borrowers from whale impact
-2. **🔧 Technical Innovation**: Dynamic orderbook matching algorithm
-3. **🔗 Protocol Integration**: Multi-protocol APY calculation
-4. **🛡️ Security First**: Comprehensive security measures
-5. **📊 User Experience**: Intuitive interface with real-time updates
+1. **Problem Solved**: Protects small borrowers from whale impact
+2. **Technical Innovation**: Dynamic orderbook matching algorithm
+3. **Protocol Integration**: Multi-protocol APY calculation
+4. **Security First**: Comprehensive security measures
+5. **User Experience**: Intuitive interface with real-time updates
 
 ### **Judges' Evaluation Criteria**
-- ✅ **Innovation**: Novel approach to lending market protection
-- ✅ **Technical Excellence**: Clean, well-documented code
-- ✅ **User Experience**: Intuitive and responsive interface
-- ✅ **Security**: Comprehensive security measures
-- ✅ **Integration**: Multiple protocol integrations
-- ✅ **Scalability**: Designed for growth and adoption
+- **Innovation**: Novel approach to lending market protection
+- **Technical Excellence**: Clean, well-documented code
+- **User Experience**: Intuitive and responsive interface
+- **Security**: Comprehensive security measures
+- **Integration**: Multiple protocol integrations
+- **Scalability**: Designed for growth and adoption
 
 ---
 
-## 📞 **Support & Contact**
-
-- **GitHub Issues**: [Report bugs or request features](https://github.com/your-repo/issues)
-- **Discord**: [Join our community](https://discord.gg/your-discord)
-- **Twitter**: [Follow us for updates](https://twitter.com/your-handle)
-- **Email**: [Contact the team](mailto:team@your-domain.com)
-
----
-
-## 🙏 **Acknowledgments**
+## **Acknowledgments**
 
 - **OpenZeppelin** for security patterns
 - **Pyth Network** for price feeds
@@ -369,7 +348,5 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 <div align="center">
 
 **Built with ❤️ for the DeFi community**
-
-[⭐ Star this repo](https://github.com/your-username/lending-protocol) • [🍴 Fork it](https://github.com/your-username/lending-protocol/fork) • [🐛 Report issues](https://github.com/your-username/lending-protocol/issues)
 
 </div>
