@@ -13,7 +13,7 @@ Thank you for your interest in contributing to our lending protocol! This docume
 ### Development Setup
 ```bash
 # Fork and clone the repository
-git clone https://github.com/your-username/lending-protocol.git
+git clone https://github.com/kpj2006/temp-e.git
 cd lending-protocol
 
 # Install dependencies
@@ -117,7 +117,7 @@ For feature requests, please include:
 ### Security Issues
 If you discover a security vulnerability, please:
 1. **DO NOT** open a public issue
-2. Email us at security@your-domain.com
+2. Email us at 24uec247@lnmiit.ac.in
 3. Include detailed information about the vulnerability
 4. Allow us time to address the issue before disclosure
 
@@ -152,8 +152,7 @@ If you discover a security vulnerability, please:
 
 - **GitHub Discussions**: For questions and discussions
 - **Discord**: Real-time chat with the community
-- **Email**: team@your-domain.com
-- **Documentation**: Check the docs folder
+- **Documentation**: Check the README
 
 ## Recognition
 
