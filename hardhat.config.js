@@ -21,13 +21,8 @@ module.exports = {
       url: "http://127.0.0.1:8545",
       chainId: 1337
     },
-    rootstock: {
-      url: "https://public-node.rsk.co",
-      chainId: 30,
-      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : []
-    },
     rootstockTestnet: {
-      url: "https://public-node.testnet.rsk.co",
+      url: "https://rootstock-testnet.g.alchemy.com/v2/dY2Oq6aoW2AGPCaTZxyjl",
       chainId: 31,
       accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : []
     }

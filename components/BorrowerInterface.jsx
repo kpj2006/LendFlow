@@ -233,7 +233,7 @@ export default function BorrowerInterface() {
   const availableLiquidity = poolStatus ? formatUSDC(poolStatus[0]) : '0.00'
 
   return (
-    <div className="space-y-8">
+    <div key={address} className="space-y-8">
       {/* Header Section */}
       <div className="text-center mb-8">
         <div className="flex items-center justify-center mb-4">

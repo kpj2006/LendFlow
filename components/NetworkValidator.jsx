@@ -11,8 +11,6 @@ export default function NetworkValidator() {
   // Supported networks - allow multiple networks for flexibility
   const supportedNetworks = {
     31: { name: 'Rootstock Testnet', color: 'blue', optimal: true },
-    1337: { name: 'Localhost', color: 'purple', optimal: false },
-    1: { name: 'Ethereum Mainnet', color: 'green', optimal: false }
   }
 
   const isConnected = !!chain

@@ -45,13 +45,25 @@ export default function LenderInterface() {
   const { storeLendingData, retrieveLendingData, isLoading: walrusLoading, error: walrusError } = useLendingDataStorage()
 
   // Get user's USDC balance
-  const { data: usdcBalance } = useContractRead({
+  const { data: usdcBalance, error: usdcBalanceError, isLoading: usdcBalanceLoading } = useContractRead({
     address: USDC_ADDRESS,
     abi: USDC_ABI,
     functionName: 'balanceOf',
     args: [address],
-    watch: true
+    watch: true,
+    enabled: !!address
   })
+
+  // Debug USDC balance
+  useEffect(() => {
+    console.log('USDC Balance Debug:', {
+      address: address,
+      usdcAddress: USDC_ADDRESS,
+      balance: usdcBalance?.toString(),
+      error: usdcBalanceError?.message,
+      isLoading: usdcBalanceLoading
+    })
+  }, [address, usdcBalance, usdcBalanceError, usdcBalanceLoading])
 
   // Get lender details (enhanced)
   const { data: lenderDetails } = useContractRead({
@@ -208,7 +220,7 @@ export default function LenderInterface() {
   const sufficientBalance = hasBalance && parseFloat(amount || '0') <= parseFloat(formatUSDC(usdcBalance) || '0')
 
   return (
-    <div className="space-y-8">
+    <div key={address} className="space-y-8">
       {/* Header Section */}
       <div className="text-center mb-8">
         <div className="flex items-center justify-center mb-4">
@@ -257,14 +269,60 @@ export default function LenderInterface() {
               </div>
               <div className="flex items-center justify-between mt-2 text-sm">
                 <span className="text-gray-400">Available Balance:</span>
-                <span className={`font-mono ${hasBalance ? 'text-green-400' : 'text-red-400'}`}>
-                  {formatUSDC(usdcBalance)} USDC
-                </span>
+                <div className="flex items-center space-x-2">
+                  <span className={`font-mono ${hasBalance ? 'text-green-400' : 'text-red-400'}`}>
+                    {usdcBalanceLoading ? 'Loading...' : formatUSDC(usdcBalance)} USDC
+                  </span>
+                  <button 
+                    onClick={() => window.location.reload()}
+                    className="text-xs text-cyan-400 hover:text-cyan-300 underline"
+                    title="Refresh balance"
+                  >
+                    Refresh
+                  </button>
+                </div>
               </div>
               {!hasBalance && (
                 <div className="flex items-center mt-2 p-2 bg-red-900/20 border border-red-500/30 rounded text-xs text-red-400">
                   <AlertTriangle className="h-3 w-3 mr-1" />
-                  <span>No USDC detected. Acquire tokens to proceed.</span>
+                  <span>No USDC detected at {USDC_ADDRESS}. Check your network and token import.</span>
+                </div>
+              )}
+              {usdcBalanceError && (
+                <div className="flex items-center mt-2 p-2 bg-yellow-900/20 border border-yellow-500/30 rounded text-xs text-yellow-400">
+                  <AlertTriangle className="h-3 w-3 mr-1" />
+                  <span>Contract read error: {usdcBalanceError.message}</span>
+                </div>
+              )}
+              
+              {!hasBalance && address && (
+                <div className="mt-3 p-3 bg-gray-800/50 border border-gray-600/30 rounded">
+                  <div className="text-xs text-gray-300 mb-2">Need USDC tokens?</div>
+                  <button
+                    onClick={async () => {
+                      try {
+                        await window.ethereum.request({
+                          method: 'wallet_watchAsset',
+                          params: {
+                            type: 'ERC20',
+                            options: {
+                              address: USDC_ADDRESS,
+                              symbol: 'USDC',
+                              decimals: 6,
+                            },
+                          },
+                        })
+                      } catch (error) {
+                        console.error('Error adding token:', error)
+                      }
+                    }}
+                    className="w-full text-xs bg-cyan-600/20 hover:bg-cyan-600/30 text-cyan-400 border border-cyan-500/30 rounded px-3 py-2 transition-colors"
+                  >
+                    Add USDC Token to MetaMask
+                  </button>
+                  <div className="text-xs text-gray-500 mt-1">
+                    Contract: {USDC_ADDRESS}
+                  </div>
                 </div>
               )}
             </div>

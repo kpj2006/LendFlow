@@ -1,17 +1,12 @@
 import { useContractRead, useContractWrite, usePrepareContractWrite } from 'wagmi'
 import { parseUnits, formatUnits } from 'ethers'
 
-// Contract addresses - Updated with deployed addresses from localhost
+// Contract addresses - Updated with deployed addresses from rootstock testnet
 export const CONTRACT_ADDRESSES = {
-  // Core Protocol - Deployed on Hardhat localhost
+  // Core Protocol - Deployed on rootstock testnet
   LENDING_POOL: process.env.NEXT_PUBLIC_LENDING_POOL_ADDRESS || '0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9',
   USDC: process.env.NEXT_PUBLIC_USDC_ADDRESS || '0x5FbDB2315678afecb367f032d93F642f64180aa3',
   CETH: process.env.NEXT_PUBLIC_CETH_ADDRESS || '0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512',
-  PYTH_ORACLE: process.env.NEXT_PUBLIC_PYTH_ORACLE_ADDRESS || '0x0000000000000000000000000000000000000000',
-
-  // Walrus Protocol - Mock addresses for development
-  WALRUS_STORAGE: process.env.NEXT_PUBLIC_WALRUS_STORAGE_ADDRESS || '0x0000000000000000000000000000000000000000',
-  WALRUS_TOKEN: process.env.NEXT_PUBLIC_WALRUS_TOKEN_ADDRESS || '0x0000000000000000000000000000000000000000',
 
   // Rootstock Bridge - Mock address
   ROOTSTOCK_BRIDGE: process.env.NEXT_PUBLIC_ROOTSTOCK_BRIDGE_ADDRESS || '0x0000000000000000000000000000000000000000',

@@ -86,7 +86,7 @@ NEXT_PUBLIC_AAVE_V3_DATA_PROVIDER_ADDRESS=0x...
 #### 5. **Network Configuration**
 ```bash
 NEXT_PUBLIC_NETWORK=rootstock-testnet
-NEXT_PUBLIC_RPC_URL=https://public-node.testnet.rsk.co
+NEXT_PUBLIC_RPC_URL=https://rootstock-testnet.g.alchemy.com/v2/dY2Oq6aoW2AGPCaTZxyjl
 NEXT_PUBLIC_CHAIN_ID=31
 
 PRIVATE_KEY=your-private-key-here
@@ -141,7 +141,7 @@ NEXT_PUBLIC_AAVE_V3_POOL_ADDRESS=0x...
 NEXT_PUBLIC_AAVE_V3_DATA_PROVIDER_ADDRESS=0x...
 
 NEXT_PUBLIC_NETWORK=rootstock-testnet
-NEXT_PUBLIC_RPC_URL=https://public-node.testnet.rsk.co
+NEXT_PUBLIC_RPC_URL=https://rootstock-testnet.g.alchemy.com/v2/dY2Oq6aoW2AGPCaTZxyjl
 NEXT_PUBLIC_CHAIN_ID=31
 PRIVATE_KEY=your-private-key-here
 

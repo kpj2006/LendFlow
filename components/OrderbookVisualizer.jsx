@@ -482,13 +482,13 @@ export default function OrderbookVisualizer() {
               <div className="p-2 bg-yellow-600/20 rounded-lg mr-3">
                 <Zap className="h-6 w-6 text-yellow-400" />
               </div>
-              <h4 className="font-orbitron font-medium text-yellow-300 uppercase">Cross-Chain</h4>
+              <h4 className="font-orbitron font-medium text-yellow-300 uppercase">APY Oracle</h4>
             </div>
             <p className="text-sm text-yellow-200 mb-3">
-              ⚡ Multi-chain execution across Ethereum, Polygon, Arbitrum, and Optimism networks
+              📊 Fetches real-time APY from Aave V3 (30%) and MakerDAO (70%), then calculates baseline APY for lenders bounds to market conditions
             </p>
             <div className="badge-success">
-              4+ Networks Active
+              Market-Adaptive Rates
             </div>
           </div>
         </div>

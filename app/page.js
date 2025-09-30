@@ -8,10 +8,12 @@ import LenderInterface from '../components/LenderInterface'
 import BorrowerInterface from '../components/BorrowerInterface'
 import PoolStatus from '../components/PoolStatus'
 import OrderbookVisualizer from '../components/OrderbookVisualizer'
-// NetworkValidator removed - strictly Rootstock Testnet
+import NetworkValidator from '../components/NetworkValidator'
+import { useNetwork } from 'wagmi'
 
 export default function Home() {
   const { isConnected } = useAccount()
+  const { chain } = useNetwork()
   const [activeTab, setActiveTab] = useState('pool')
   const [mounted, setMounted] = useState(false)
 
@@ -104,12 +106,12 @@ export default function Home() {
               <div className="flex items-center justify-center space-x-3">
                 <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
                 <span className="text-green-400 font-orbitron text-sm uppercase tracking-wider">
-                  Rootstock Testnet Active
+                  {chain ? (chain.id === 31 ? 'Rootstock Testnet Active' : `${chain.name} Network`) : 'Network Not Connected'}
                 </span>
                 <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
               </div>
               <p className="text-green-300 text-xs mt-2 font-mono">
-                Chain ID: 31 | Currency: tRBTC
+                Chain ID: {chain?.id || 'N/A'} | Currency: {chain?.nativeCurrency?.symbol || 'N/A'}
               </p>
             </div>
           </div>
