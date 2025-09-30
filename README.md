@@ -4,7 +4,7 @@
 
 ![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
 ![Solidity](https://img.shields.io/badge/solidity-^0.8.19-orange.svg)
-![Next.js](https://img.shields.io/badge/next.js-14.0.0-black.svg)
+![Next.js](https://img.shields.io/badge/next.js-14.0.0-green.svg)
 ![Hardhat](https://img.shields.io/badge/hardhat-2.19.0-yellow.svg)
 
 **A revolutionary decentralized lending protocol that protects small borrowers from whale impact through intelligent orderbook matching and multi-protocol APY integration.**
@@ -18,9 +18,8 @@
 We've created a **next-generation DeFi lending protocol** that solves the critical problem of **whale impact on small borrowers** in decentralized lending markets. Our protocol uses **dynamic orderbook matching** to ensure fair pricing for all participants while integrating multiple DeFi protocols for optimal APY calculation.
 
 ### **Key Innovation: Dynamic Borrower Classification**
-- **Small Borrowers** (< 1,000 USDC): Protected with **lowest APY matching**
-- **Whale Borrowers** (≥ 1,000 USDC): Premium service with **highest APY matching**
-- **Automatic Classification**: Based on loan size relative to pool liquidity
+- **Small Borrowers** : Protected with **lowest APY matching**
+- **Whale Borrowers** : Premium service with **highest APY matching**
 
 ---
 
@@ -57,7 +56,7 @@ graph TB
 
 ## **Core Features**
 
-### **mall Borrower Protection**
+### **Small Borrower Protection**
 - **Lowest APY First**: Small borrowers get the best available rates
 - **Whale Impact Protection**: Large loans don't affect small borrower pricing
 - **Dynamic Threshold**: 5% of pool liquidity determines borrower classification
@@ -151,29 +150,33 @@ npm run deploy
 ### **Small Borrower Flow (< 1,000 USDC)**
 ```
 Pool State:
-├── Lender A: 50 USDC @ 3.6% APY
-├── Lender B: 50 USDC @ 4.0% APY
+├── Lender A: 100 USDC @ 3.67% APY
+├── Lender B: 200 USDC @ 3.8% APY
+├── Lender B: 300 USDC @ 4.0% APY
 └── Total: 100 USDC available
 
-Small Borrower wants 30 USDC:
+Small Borrower wants 150 USDC:
 1. Sort lenders by APY (ascending)
-2. Match with Lender A @ 3.6% (best rate)
-3. Remaining: A=20 USDC, B=50 USDC
-4. Borrower gets 30 USDC @ 3.6% APY
+2. Match with Lender A @ 3.67% (best rate)
+3. Remaining: A=0 USDC, B=200 USDC, C= 300 USDC
+4. Borrower gets 50 USDC @ 3.8% APY
+5. Weighted APY: (100×3.67 + 50×3.8)/150 = 3.71%
+6. 
 ```
 
 ### **Whale Borrower Flow (≥ 1,000 USDC)**
 ```
 Pool State:
-├── Lender A: 50 USDC @ 3.6% APY
-├── Lender B: 50 USDC @ 4.0% APY
+├── Lender A: 100 USDC @ 3.67% APY
+├── Lender B: 200 USDC @ 3.8% APY
+├── Lender B: 300 USDC @ 4.0% APY
 └── Total: 100 USDC available
 
-Whale Borrower wants 70 USDC:
+Whale Borrower wants 380 USDC:
 1. Sort lenders by APY (descending)
-2. Take 50 USDC from Lender B @ 4.0%
-3. Take 20 USDC from Lender A @ 3.6%
-4. Weighted APY: (50×4.0 + 20×3.6)/70 = 3.94%
+2. Take 300 USDC from Lender C @ 4.0%
+3. Take 80 USDC from Lender B @ 3.8%
+4. Weighted APY: (300×4.0 + 80×3.8)/380 = 3.95%
 5. Borrower gets 70 USDC @ 3.94% APY
 ```
 
@@ -204,7 +207,6 @@ Whale Borrower wants 70 USDC:
 ---
 
 ## **Testing & Security**
-
 ### **Test Coverage**
 ```bash
 # Run all tests
@@ -250,6 +252,8 @@ npm test -- --grep "FrontendIntegration"
 - **Mainnet**: Chain ID 30
 - **Testnet**: Chain ID 31
 - **Benefits**: Bitcoin security, lower fees
+- **Ease**: Easily Deployable
+- **Understandability**: Easy to understand Docs
 
 ### **Cross-Chain Support**
 - **Bitcoin**: Via Rootstock Bridge
@@ -318,22 +322,12 @@ git checkout -b feature/amazing-feature
 ```
 
 ---
-### **What Makes This Special**
-1. **Problem Solved**: Protects small borrowers from whale impact
-2. **Technical Innovation**: Dynamic orderbook matching algorithm
-3. **Protocol Integration**: Multi-protocol APY calculation
-4. **Security First**: Comprehensive security measures
-5. **User Experience**: Intuitive interface with real-time updates
-
-### **Judges' Evaluation Criteria**
-- **Innovation**: Novel approach to lending market protection
-- **Technical Excellence**: Clean, well-documented code
-- **User Experience**: Intuitive and responsive interface
-- **Security**: Comprehensive security measures
-- **Integration**: Multiple protocol integrations
-- **Scalability**: Designed for growth and adoption
-
----
+## **Team**
+- **Karun Pacholi**: Full stack Web3 Developer, Backend engineer
+- **Vaibhav Rawat**: Full stack web3 Developer, Frontend Developer
+- **Rudra Bhaskar**: Full Stack web3 Developer, Deep Learning AI
+- **Manas Hatwar**: Full stack web3 Developer
+- **K Arya Sekhar Das**: Frontend Developer, Security Researcher
 
 ## **Acknowledgments**
 
